@@ -259,14 +259,31 @@ export default function AdvisorDashboard({
   return (
     <div id="advisor-dashboard-container" className="space-y-6">
       {/* Tab Menu */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-2">
-        <div className="flex gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-2">
+        {/* Mobile/Tablet Dropdown Select */}
+        <div className="block lg:hidden w-full">
+          <label htmlFor="advisor-mobile-tab-select" className="block text-xs font-bold text-slate-500 mb-1">Módulo de Asesor / Recepción</label>
+          <select
+            id="advisor-mobile-tab-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as 'reception' | 'quotes' | 'agenda' | 'crm')}
+            className="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8D6A28]"
+          >
+            <option value="reception">🚗 Recepción y Órdenes</option>
+            <option value="quotes">💵 Cotizaciones y Cobros</option>
+            <option value="agenda">📅 Agenda y Bahías</option>
+            <option value="crm">🕒 CRM Clínico del Auto</option>
+          </select>
+        </div>
+
+        {/* Desktop Horizontal Tabs Menu */}
+        <div className="hidden lg:flex gap-2">
           <button
             id="advisor-tab-reception"
             onClick={() => setActiveTab('reception')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'reception'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -278,7 +295,7 @@ export default function AdvisorDashboard({
             onClick={() => setActiveTab('quotes')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'quotes'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -290,7 +307,7 @@ export default function AdvisorDashboard({
             onClick={() => setActiveTab('agenda')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'agenda'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -302,7 +319,7 @@ export default function AdvisorDashboard({
             onClick={() => setActiveTab('crm')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'crm'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >

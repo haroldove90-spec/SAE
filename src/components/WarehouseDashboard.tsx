@@ -138,14 +138,30 @@ export default function WarehouseDashboard({
   return (
     <div id="warehouse-dashboard-container" className="space-y-6">
       {/* Tab Menu */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-2">
-        <div className="flex gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-2">
+        {/* Mobile/Tablet Dropdown Select */}
+        <div className="block lg:hidden w-full">
+          <label htmlFor="warehouse-mobile-tab-select" className="block text-xs font-bold text-slate-500 mb-1">Módulo de Almacén</label>
+          <select
+            id="warehouse-mobile-tab-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as 'catalog' | 'requisitions' | 'purchases')}
+            className="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8D6A28]"
+          >
+            <option value="catalog">📦 Catálogo e Inventario</option>
+            <option value="requisitions">📋 Requisiciones de Mecánicos ({requisitions.filter(r => r.status === 'Pendiente').length} pendientes)</option>
+            <option value="purchases">🚚 Compras y Proveedores</option>
+          </select>
+        </div>
+
+        {/* Desktop Horizontal Tabs Menu */}
+        <div className="hidden lg:flex gap-2">
           <button
             id="warehouse-tab-catalog"
             onClick={() => setActiveTab('catalog')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'catalog'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -157,7 +173,7 @@ export default function WarehouseDashboard({
             onClick={() => setActiveTab('requisitions')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'requisitions'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -174,7 +190,7 @@ export default function WarehouseDashboard({
             onClick={() => setActiveTab('purchases')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'purchases'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >

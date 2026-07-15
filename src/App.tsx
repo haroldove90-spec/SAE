@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, User, Wrench, Package, Car, Laptop, Clock, 
   Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle,
-  Smartphone, Download, X, Home
+  Smartphone, Download, X, Home, LogOut
 } from 'lucide-react';
 import { useWorkshopState } from './useWorkshopState';
 import { UserRole } from './types';
@@ -115,7 +115,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-slate-100 font-sans text-slate-800 flex flex-col selection:bg-amber-600 selection:text-white ${!showLanding ? 'pb-24' : ''}`}>
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden bg-slate-100 font-sans text-slate-800 flex flex-col selection:bg-amber-600 selection:text-white ${!showLanding ? 'pb-24' : ''}`}>
       
       {/* WORKSHOP MAIN LOGO HEADER - Shown only when a role dashboard is active */}
       {!showLanding && (
@@ -123,7 +123,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             
             {/* Logo & Workshop Name */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="relative flex-shrink-0">
                 <img 
                   src="https://appdesignproyectos.com/sre.png" 
@@ -132,10 +132,10 @@ export default function App() {
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div>
-                <h1 className="text-sm sm:text-xl font-bold font-display text-slate-800 tracking-tight flex items-center gap-1.5 sm:gap-2">
-                  <span>SERVICIO AUTOMOTRIZ ESPECIALIZADO</span>
-                  <span className="text-[9px] sm:text-[10px] bg-[#8D6A28] text-white px-1.5 sm:px-2 py-0.5 rounded-full font-sans font-semibold uppercase border border-[#8D6A28]/20 shrink-0">
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-lg md:text-xl font-bold font-display text-slate-800 tracking-tight flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="truncate">SERVICIO AUTOMOTRIZ ESPECIALIZADO</span>
+                  <span className="text-[8px] sm:text-[10px] bg-[#8D6A28] text-white px-1.5 sm:px-2 py-0.5 rounded-full font-sans font-semibold uppercase border border-[#8D6A28]/20 shrink-0 w-fit">
                     SAE PWA
                   </span>
                 </h1>
@@ -145,6 +145,18 @@ export default function App() {
                   <span className="truncate">{settings.address}</span>
                 </p>
               </div>
+            </div>
+
+            {/* Quick Logout button for mobile & tablet (shows up in the header) */}
+            <div className="flex lg:hidden items-center shrink-0">
+              <button
+                onClick={() => setShowLanding(true)}
+                className="flex items-center gap-1 bg-red-600/15 text-red-400 hover:bg-red-600 hover:text-white px-2.5 py-1.5 rounded-xl border border-red-500/20 text-xs font-bold cursor-pointer transition-all shadow-sm"
+                title="Cerrar Sesión / Cambiar de Rol"
+              >
+                <LogOut size={14} className="text-red-500" />
+                <span>Salir</span>
+              </button>
             </div>
 
             {/* Time & Quick Stats Dashboard */}
@@ -484,14 +496,14 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-6 gap-1 w-full text-center">
               
-              {/* Home / Inicio Button */}
+              {/* Logout / Salir Button */}
               <button
                 onClick={() => setShowLanding(true)}
-                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-slate-300 hover:text-white hover:bg-white/5 cursor-pointer"
-                title="Volver a Inicio"
+                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                title="Cerrar Sesión y Cambiar de Rol"
               >
-                <Home className="w-5 h-5 sm:w-4 sm:h-4 text-[#F8B232]" />
-                <span className="text-[9px] sm:text-xs font-bold">Inicio</span>
+                <LogOut className="w-5 h-5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
+                <span className="text-[9px] sm:text-xs font-bold">Salir / Rol</span>
               </button>
 
               {/* Roles Buttons */}

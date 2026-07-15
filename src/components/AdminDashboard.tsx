@@ -201,14 +201,31 @@ export default function AdminDashboard({
   return (
     <div id="admin-dashboard-container" className="space-y-6">
       {/* Tab Selector */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-2">
-        <div className="flex gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-2">
+        {/* Mobile/Tablet Dropdown Select */}
+        <div className="block lg:hidden w-full">
+          <label htmlFor="admin-mobile-tab-select" className="block text-xs font-bold text-slate-500 mb-1">Módulo del Administrador</label>
+          <select
+            id="admin-mobile-tab-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as 'metrics' | 'finances' | 'personnel' | 'config')}
+            className="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8D6A28]"
+          >
+            <option value="metrics">📈 Métricas de Negocio</option>
+            <option value="finances">💵 Finanzas y Contabilidad</option>
+            <option value="personnel">👥 Personal y Comisiones</option>
+            <option value="config">⚙️ Configuración Maestra</option>
+          </select>
+        </div>
+
+        {/* Desktop Horizontal Tabs Menu */}
+        <div className="hidden lg:flex gap-2">
           <button
             id="tab-metrics"
             onClick={() => setActiveTab('metrics')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'metrics'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
@@ -220,7 +237,7 @@ export default function AdminDashboard({
             onClick={() => setActiveTab('finances')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'finances'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
@@ -232,7 +249,7 @@ export default function AdminDashboard({
             onClick={() => setActiveTab('personnel')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'personnel'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
@@ -244,7 +261,7 @@ export default function AdminDashboard({
             onClick={() => setActiveTab('config')}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === 'config'
-                ? 'bg-amber-600 text-white shadow-md'
+                ? 'bg-[#8D6A28] text-white shadow-md'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
@@ -253,7 +270,8 @@ export default function AdminDashboard({
           </button>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between lg:justify-end gap-2 w-full lg:w-auto">
+          <span className="text-xs text-slate-400 block lg:hidden font-medium">Panel General</span>
           <button
             onClick={() => {
               if (confirm('¿Estás seguro de restablecer todos los datos del taller a los valores de prueba originales? Se perderán los cambios de esta sesión.')) {
