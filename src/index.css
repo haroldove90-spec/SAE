@@ -1,0 +1,266 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Deep cybernetic color palette for Immersive UI */
+  --color-slate-50: rgba(255, 255, 255, 0.02);
+  --color-slate-100: #0A0C10;
+  --color-slate-200: rgba(255, 255, 255, 0.08);
+  --color-slate-300: rgba(255, 255, 255, 0.12);
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #94A3B8;
+  --color-slate-600: #64748B;
+  --color-slate-700: #E2E8F0;
+  --color-slate-800: #E2E8F0;
+  --color-slate-900: #0A0C10;
+}
+
+/* Base Body Styles - Glowing Radial Gradient */
+body {
+  margin: 0;
+  background-color: #0A0C10 !important;
+  background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0A0C10 70%) !important;
+  color: #E2E8F0 !important;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+/* Master background override for slate-100 container */
+.bg-slate-100 {
+  background-color: transparent !important;
+}
+
+/* Futuristic Semi-Transparent Surfaces (Panels/Cards) */
+.bg-white {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+}
+
+.bg-slate-50 {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Global Text Remapping for Readability in Dark Mode */
+.text-slate-800, .text-slate-900 {
+  color: #E2E8F0 !important;
+}
+
+.text-slate-700, .text-slate-600 {
+  color: #CBD5E1 !important;
+}
+
+.text-slate-500, .text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+.text-slate-300 {
+  color: #64748B !important;
+}
+
+/* Table Enhancements */
+thead tr {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+tr:hover {
+  background-color: rgba(255, 255, 255, 0.01) !important;
+}
+
+td {
+  color: #E2E8F0 !important;
+}
+
+/* Borders Global Alignment */
+.border, .border-slate-100, .border-slate-200, .border-slate-300, .border-slate-200\/50, .border-dashed {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Micro-Borders around specific layouts */
+.border-b {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.border-t {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.border-l {
+  border-left-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.border-r {
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Dark Mode Inputs, Dropdowns, and Textareas */
+input[type="text"], 
+input[type="number"], 
+input[type="tel"], 
+input[type="email"], 
+input[type="date"], 
+select, 
+textarea {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  color: #E2E8F0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+input[type="text"]:focus, 
+input[type="number"]:focus, 
+input[type="tel"]:focus, 
+input[type="email"]:focus, 
+input[type="date"]:focus, 
+select:focus, 
+textarea:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+  outline: none !important;
+}
+
+/* Option element styling inside dark select dropdowns */
+option {
+  background-color: #0F172A !important;
+  color: #E2E8F0 !important;
+}
+
+/* Glowing Cybernetic Role Status Headers & Banners */
+.bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.06) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+.text-amber-900, .text-amber-800, .text-amber-700 {
+  color: #FBBF24 !important;
+}
+
+.bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+.text-blue-900, .text-blue-800, .text-blue-700 {
+  color: #60A5FA !important;
+}
+
+.bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.06) !important;
+  border-color: rgba(249, 115, 22, 0.2) !important;
+}
+.text-orange-900, .text-orange-800, .text-orange-700 {
+  color: #FB923C !important;
+}
+
+.bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.06) !important;
+  border-color: rgba(168, 85, 247, 0.2) !important;
+}
+.text-purple-900, .text-purple-800 {
+  color: #C084FC !important;
+}
+
+.bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.06) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+.text-emerald-900, .text-emerald-800, .text-emerald-700, .text-emerald-600 {
+  color: #34D399 !important;
+}
+
+/* CDMX Engomado Alerts in Customer Portal */
+.bg-yellow-50 {
+  background-color: rgba(245, 158, 11, 0.06) !important;
+  border-left: 4px solid #FBBF24 !important;
+}
+.text-yellow-800 {
+  color: #FBBF24 !important;
+}
+
+.bg-pink-50 {
+  background-color: rgba(236, 72, 153, 0.06) !important;
+  border-left: 4px solid #F472B6 !important;
+}
+.text-pink-800 {
+  color: #F472B6 !important;
+}
+
+.bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.06) !important;
+  border-left: 4px solid #F87171 !important;
+}
+.text-red-800 {
+  color: #F87171 !important;
+}
+
+.bg-green-50 {
+  background-color: rgba(16, 185, 129, 0.06) !important;
+  border-left: 4px solid #34D399 !important;
+}
+.text-green-800 {
+  color: #34D399 !important;
+}
+
+/* Semi-Transparent Status Badges */
+.bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+.bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+.bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.bg-indigo-100, .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+}
+
+/* Custom styles for professional scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .7;
+  }
+}

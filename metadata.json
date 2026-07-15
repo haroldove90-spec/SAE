@@ -1,0 +1,6 @@
+{
+  "name": "InterTaller Dashboard",
+  "description": "Dashboard para la administración de un taller mecánico con roles de Administrador, Asesor, Mecánico, Almacenista y Cliente.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
