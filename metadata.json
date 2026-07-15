@@ -1,6 +1,6 @@
 {
-  "name": "InterTaller Dashboard",
-  "description": "Dashboard para la administración de un taller mecánico con roles de Administrador, Asesor, Mecánico, Almacenista y Cliente.",
+  "name": "SAE",
+  "description": "SAE - Servicio Automotriz Especializado. Dashboard para la administración completa de talleres automotrices.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, User, Wrench, Package, Car, Laptop, Clock, 
-  Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle
+  Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle,
+  Smartphone, Download, X
 } from 'lucide-react';
 import { useWorkshopState } from './useWorkshopState';
 import { UserRole } from './types';
@@ -66,6 +67,39 @@ export default function App() {
   
   // Mobile responsive menu toggle
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   // Clock state (Simulating real-world CDMX Local Time)
   const [timeStr, setTimeStr] = useState('15:52:24');
@@ -134,18 +168,23 @@ export default function App() {
 
       {/* WORKSHOP MAIN LOGO HEADER */}
       <header className="bg-white border-b border-slate-200 py-4 px-6 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
           
           {/* Logo & Workshop Name */}
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-600 text-white rounded-xl shadow-md shadow-amber-600/10 flex items-center justify-center">
-              <Laptop size={24} className="stroke-[2.5]" />
+            <div className="relative flex-shrink-0">
+              <img 
+                src="https://appdesignproyectos.com/sre.png" 
+                alt="Servicio Automotriz Especializado (SAE)" 
+                className="h-14 w-auto object-contain bg-black/40 p-1 rounded-xl border border-white/10 shadow-sm"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold font-display text-slate-800 tracking-tight flex items-center gap-2">
-                {settings.name || 'InterTaller Lomas'}
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-sans font-medium uppercase border border-slate-200">
-                  Softpyme v4.0
+                {settings.name || 'Servicio Automotriz Especializado (SAE)'}
+                <span className="text-[10px] bg-[#8D6A28] text-white px-2 py-0.5 rounded-full font-sans font-semibold uppercase border border-[#8D6A28]/20">
+                  SAE PWA
                 </span>
               </h1>
               <p className="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
@@ -157,7 +196,18 @@ export default function App() {
           </div>
 
           {/* Time & Quick Stats Dashboard */}
-          <div className="flex items-center gap-4 text-xs font-semibold">
+          <div className="flex items-center flex-wrap gap-4 text-xs font-semibold justify-center lg:justify-end">
+            {/* PWA Install Button */}
+            <button
+              onClick={handleInstallClick}
+              id="pwa-install-nav-btn"
+              className="flex items-center gap-2 bg-[#8D6A28] text-white px-4 py-2.5 rounded-xl font-bold border border-white/10 hover:bg-[#aa8134] transition-all text-xs cursor-pointer shadow-md hover:shadow-[#8D6A28]/20"
+              title="Instalar Aplicación SAE en tu dispositivo"
+            >
+              <Smartphone size={15} className="animate-pulse text-amber-300" />
+              <span>Instalar App SAE</span>
+            </button>
+
             {/* CDMX Time Tracker */}
             <div className="text-right hidden md:block">
               <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Simulación Local CDMX</p>
@@ -329,12 +379,79 @@ export default function App() {
       {/* COMPLIANT FOOTER */}
       <footer className="bg-white border-t border-slate-200 mt-12 py-6 px-6 text-xs text-center text-slate-400 space-y-2">
         <p className="max-w-2xl mx-auto">
-          <strong>InterTaller Softpyme Dashboard</strong> • Desarrollado con los más altos estándares de fidelidad y usabilidad interactiva. Sincronización local persistente en tiempo real.
+          <strong>Servicio Automotriz Especializado (SAE) Dashboard</strong> • Desarrollado con los más altos estándares de fidelidad y usabilidad interactiva. Sincronización local persistente en tiempo real.
         </p>
         <p className="font-mono text-[10px]">
-          Simulación de Operación Mecánica • Port 3000 • CDMX Verificación Vehicular Integrada • Licencia Comercial Softpyme
+          Simulación de Operación Mecánica • Port 3000 • CDMX Verificación Vehicular Integrada • Licencia Comercial SAE
         </p>
       </footer>
+
+      {/* MANUAL PWA INSTALLATION GUIDE MODAL */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[9999]">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#010101] border-2 border-[#8D6A28]/50 max-w-md w-full rounded-2xl p-6 shadow-2xl shadow-[#8D6A28]/10 text-white relative"
+            >
+              <button 
+                onClick={() => setShowInstallGuide(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer p-1.5 rounded-full hover:bg-white/10"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex flex-col items-center text-center space-y-4">
+                <img 
+                  src="https://appdesignproyectos.com/saeicono.png" 
+                  alt="SAE Icono" 
+                  className="w-16 h-16 rounded-2xl shadow-lg border border-[#8D6A28]/30 object-contain"
+                  referrerPolicy="no-referrer"
+                />
+                <div>
+                  <h3 className="text-xl font-bold font-display tracking-tight text-white">Instalar App SAE</h3>
+                  <p className="text-xs text-slate-400 mt-1">Lleva el Servicio Automotriz Especializado directamente en tu pantalla de inicio móvil o tablet.</p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                  <h4 className="text-sm font-semibold text-[#F8B232] flex items-center gap-1.5">
+                    <Smartphone size={16} />
+                    <span>En iPhone y iPad (Safari):</span>
+                  </h4>
+                  <ol className="list-decimal list-inside text-xs text-slate-300 mt-2 space-y-1 pl-1">
+                    <li>Toca el botón <strong className="text-white">Compartir</strong> (icono de cuadrado con flecha hacia arriba) en la barra de navegación.</li>
+                    <li>Desplázate hacia abajo y selecciona <strong className="text-white">"Agregar a Inicio"</strong>.</li>
+                    <li>Confirma el nombre <strong className="text-white">SAE</strong> para tener acceso inmediato.</li>
+                  </ol>
+                </div>
+
+                <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                  <h4 className="text-sm font-semibold text-[#F8B232] flex items-center gap-1.5">
+                    <Smartphone size={16} />
+                    <span>En Android (Chrome / Edge / Opera):</span>
+                  </h4>
+                  <ol className="list-decimal list-inside text-xs text-slate-300 mt-2 space-y-1 pl-1">
+                    <li>Toca el menú de <strong className="text-white">3 puntos</strong> en la esquina superior derecha del navegador.</li>
+                    <li>Selecciona <strong className="text-white">"Instalar aplicación"</strong> o <strong className="text-white">"Agregar a la pantalla principal"</strong>.</li>
+                    <li>¡Listo! La app se ejecutará de forma independiente sin barras de navegador.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="w-full mt-6 py-2.5 bg-[#8D6A28] text-white rounded-xl font-bold border border-[#8D6A28]/40 hover:bg-[#aa8134] transition-all text-sm cursor-pointer shadow-md"
+              >
+                Entendido
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

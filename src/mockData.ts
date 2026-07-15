@@ -599,13 +599,13 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
 ];
 
 export const INITIAL_SETTINGS: WorkshopSettings = {
-  name: 'InterTaller Lomas - Softpyme',
-  rfc: 'ITL150820MX7',
+  name: 'Servicio Automotriz Especializado (SAE)',
+  rfc: 'SAE150820MX7',
   address: 'Av. Paseo de las Palmas 450, Lomas de Chapultepec, Miguel Hidalgo, 11000 CDMX',
   phone: '55-5555-9000',
-  email: 'contacto@intertallerlomas.com.mx',
-  logoUrl: '', // Can be fallback or rendered visually
+  email: 'contacto@servicioautomotriz.com.mx',
+  logoUrl: 'https://appdesignproyectos.com/sre.png', // Logo provided by user
   terms: '1. Toda cotización tiene una vigencia de 15 días naturales.\n2. No nos hacemos responsables por objetos de valor no registrados en el inventario/checklist de entrada.\n3. Los vehículos con más de 48 horas de listos sin ser retirados causarán un costo de resguardo de $150 MXN por día.',
   taxRate: 16, // IVA 16% México
-  bankDetails: 'Banco BBVA Bancomer • Beneficiario: InterTaller de México S.A. de C.V. • Cuenta: 0123 4567 8901 • CLABE: 0121 8000 1234 5678 90'
+  bankDetails: 'Banco BBVA Bancomer • Beneficiario: Servicio Automotriz Especializado S.A. de C.V. • Cuenta: 0123 4567 8901 • CLABE: 0121 8000 1234 5678 90'
 };
