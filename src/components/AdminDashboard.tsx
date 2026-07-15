@@ -192,7 +192,7 @@ export default function AdminDashboard({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Reporte_Financiero_InterTaller_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Reporte_Financiero_SAE_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

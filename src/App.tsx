@@ -119,27 +119,27 @@ export default function App() {
       
       {/* WORKSHOP MAIN LOGO HEADER - Shown only when a role dashboard is active */}
       {!showLanding && (
-        <header className="bg-white border-b border-slate-200 py-4 px-6 shadow-sm">
-          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+        <header className="bg-white border-b border-slate-200 py-3 px-4 lg:py-4 lg:px-6 shadow-sm">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             
             {/* Logo & Workshop Name */}
             <div className="flex items-center gap-3">
               <div className="relative flex-shrink-0">
                 <img 
                   src="https://appdesignproyectos.com/sre.png" 
-                  alt="Servicio Automotriz Especializado (SAE)" 
-                  className="h-14 w-auto object-contain bg-black/40 p-1 rounded-xl border border-white/10 shadow-sm"
+                  alt="Servicio Automotriz Especializado" 
+                  className="h-10 w-auto sm:h-14 object-contain bg-black/40 p-1 rounded-xl border border-white/10 shadow-sm"
                   referrerPolicy="no-referrer"
                 />
               </div>
               <div>
-                <h1 className="text-xl font-bold font-display text-slate-800 tracking-tight flex items-center gap-2">
-                  {settings.name || 'Servicio Automotriz Especializado (SAE)'}
-                  <span className="text-[10px] bg-[#8D6A28] text-white px-2 py-0.5 rounded-full font-sans font-semibold uppercase border border-[#8D6A28]/20">
+                <h1 className="text-sm sm:text-xl font-bold font-display text-slate-800 tracking-tight flex items-center gap-1.5 sm:gap-2">
+                  <span>SERVICIO AUTOMOTRIZ ESPECIALIZADO</span>
+                  <span className="text-[9px] sm:text-[10px] bg-[#8D6A28] text-white px-1.5 sm:px-2 py-0.5 rounded-full font-sans font-semibold uppercase border border-[#8D6A28]/20 shrink-0">
                     SAE PWA
                   </span>
                 </h1>
-                <p className="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-1.5">
+                <p className="text-xs text-slate-400 font-mono mt-0.5 hidden lg:flex items-center gap-1.5">
                   <span>RFC: <strong>{settings.rfc}</strong></span>
                   <span>•</span>
                   <span className="truncate">{settings.address}</span>
@@ -148,7 +148,7 @@ export default function App() {
             </div>
 
             {/* Time & Quick Stats Dashboard */}
-            <div className="flex items-center flex-wrap gap-4 text-xs font-semibold justify-center lg:justify-end">
+            <div className="hidden lg:flex items-center flex-wrap gap-4 text-xs font-semibold justify-end">
               {/* Back to Home Button */}
               <button
                 onClick={() => setShowLanding(true)}
@@ -226,7 +226,7 @@ export default function App() {
               />
 
               {/* Grid of access icons with name (No description, strictly requested) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-5xl">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 w-full max-w-5xl">
                 {[
                   { id: 'admin', name: 'Administrador / Dueño', icon: Shield },
                   { id: 'advisor', name: 'Asesor / Recepción', icon: User },
@@ -244,12 +244,12 @@ export default function App() {
                         setCurrentRole(roleItem.id as UserRole);
                         setShowLanding(false);
                       }}
-                      className="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-200 cursor-pointer transition-all aspect-square text-center shadow-sm hover:shadow-md"
+                      className="flex flex-col items-center justify-center p-4 sm:p-6 bg-white rounded-2xl border border-slate-200 cursor-pointer transition-all aspect-square text-center shadow-sm hover:shadow-md"
                     >
-                      <div className="p-4 bg-[#8D6A28]/10 text-[#8D6A28] rounded-full mb-4 border border-[#8D6A28]/20 flex items-center justify-center">
-                        <IconComponent size={32} className="stroke-[1.8]" />
+                      <div className="p-3 sm:p-4 bg-[#8D6A28]/10 text-[#8D6A28] rounded-full mb-2 sm:mb-4 border border-[#8D6A28]/20 flex items-center justify-center">
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 stroke-[1.8]" />
                       </div>
-                      <span className="font-bold text-sm tracking-tight text-slate-800">{roleItem.name}</span>
+                      <span className="font-bold text-xs sm:text-sm tracking-tight text-slate-800">{roleItem.name}</span>
                     </motion.button>
                   );
                 })}
@@ -478,23 +478,23 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* PERSISTENT BOTTOM NAVIGATION BAR (for Tablet & Fullscreen) */}
+      {/* PERSISTENT BOTTOM NAVIGATION BAR (for Mobile, Tablet & Fullscreen) */}
       {!showLanding && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#010101]/95 backdrop-blur-md border-t-2 border-[#8D6A28]/50 py-3 px-4 shadow-2xl z-40 hidden sm:block">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            
-            {/* Left: Home Button */}
-            <button
-              onClick={() => setShowLanding(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 cursor-pointer transition-all font-semibold text-xs"
-              title="Volver a Inicio"
-            >
-              <Home size={16} className="text-[#F8B232]" />
-              <span className="hidden md:inline">Inicio</span>
-            </button>
+        <div className="fixed bottom-0 left-0 right-0 bg-[#010101]/95 backdrop-blur-md border-t-2 border-[#8D6A28]/50 py-1.5 px-2 sm:px-4 shadow-2xl z-40 block">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-6 gap-1 w-full text-center">
+              
+              {/* Home / Inicio Button */}
+              <button
+                onClick={() => setShowLanding(true)}
+                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-slate-300 hover:text-white hover:bg-white/5 cursor-pointer"
+                title="Volver a Inicio"
+              >
+                <Home className="w-5 h-5 sm:w-4 sm:h-4 text-[#F8B232]" />
+                <span className="text-[9px] sm:text-xs font-bold">Inicio</span>
+              </button>
 
-            {/* Center: Active role buttons switcher */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Roles Buttons */}
               {[
                 { id: 'admin', label: 'Admin', icon: Shield },
                 { id: 'advisor', label: 'Asesor', icon: User },
@@ -508,29 +508,19 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setCurrentRole(item.id as UserRole)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs ${
+                    className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all cursor-pointer ${
                       isActive 
-                        ? 'bg-[#8D6A28] text-white border border-white/20 shadow-lg shadow-[#8D6A28]/10' 
-                        : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
+                        ? 'bg-[#8D6A28] text-white border border-white/10 shadow-lg shadow-[#8D6A28]/10' 
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <IconComponent size={14} />
-                    <span className="hidden md:inline">{item.label}</span>
+                    <IconComponent className="w-5 h-5 sm:w-4 sm:h-4" />
+                    <span className="text-[9px] sm:text-xs font-bold">{item.label}</span>
                   </button>
                 );
               })}
+
             </div>
-
-            {/* Right: Install button */}
-            <button
-              onClick={handleInstallClick}
-              className="flex items-center gap-1.5 bg-[#8D6A28]/20 text-[#F8B232] px-3 py-2 rounded-xl font-bold border border-[#8D6A28]/40 hover:bg-[#8D6A28] hover:text-white transition-all text-xs cursor-pointer shadow-sm"
-              title="Instalar App SAE"
-            >
-              <Smartphone size={14} className="animate-pulse" />
-              <span className="hidden md:inline">Instalar App</span>
-            </button>
-
           </div>
         </div>
       )}
