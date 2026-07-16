@@ -522,7 +522,7 @@ export default function AdvisorDashboard({
                 <span className="text-[10px] text-slate-400 italic">Haz clic en los botones para registrar daños</span>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                 {/* Visual Front/Rear/Side Toggles */}
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center space-y-3">
                   <span className="text-[11px] font-bold text-slate-500 uppercase">Inspección de Daños</span>
@@ -530,40 +530,40 @@ export default function AdvisorDashboard({
                     <button 
                       type="button"
                       onClick={() => setChecklist(prev => ({ ...prev, scratches: !prev.scratches }))}
-                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
                         checklist.scratches 
                           ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
                           : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
                         checklist.scratches ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
                       }`}>
-                        <Sparkles size={16} />
+                        <Sparkles size={14} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold leading-tight">Rayones</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{checklist.scratches ? 'Reportado' : 'Ninguno'}</p>
+                        <p className="text-xs font-bold leading-tight truncate">Rayones</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{checklist.scratches ? 'Reportado' : 'Ninguno'}</p>
                       </div>
                     </button>
 
                     <button 
                       type="button"
                       onClick={() => setChecklist(prev => ({ ...prev, dents: !prev.dents }))}
-                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
                         checklist.dents 
                           ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
                           : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
                         checklist.dents ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
                       }`}>
-                        <AlertTriangle size={16} />
+                        <AlertTriangle size={14} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold leading-tight">Golpes</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{checklist.dents ? 'Reportado' : 'Ninguno'}</p>
+                        <p className="text-xs font-bold leading-tight truncate">Golpes</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{checklist.dents ? 'Reportado' : 'Ninguno'}</p>
                       </div>
                     </button>
                   </div>
