@@ -335,7 +335,7 @@ export default function AdvisorDashboard({
   const clientVehicles = vehicles.filter(v => v.ownerId === selectedClientId);
 
   return (
-    <div id="advisor-dashboard-container" className="space-y-6">
+    <div id="advisor-dashboard-container" className="space-y-6 pb-28 md:pb-32">
       {/* Tab Menu */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-2">
         {/* Mobile/Tablet Dropdown Select */}
@@ -409,7 +409,7 @@ export default function AdvisorDashboard({
 
       {/* RECEPTION & CHECK-IN TAB */}
       {activeTab === 'reception' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* STEP 1: Select Client & Vehicle */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5 font-display">
@@ -867,8 +867,8 @@ export default function AdvisorDashboard({
           </div>
 
           {/* STEP 3: Motivo de visita & Open Order */}
-          <form onSubmit={handleCreateOrder} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-            <div className="space-y-4 flex-1">
+          <form onSubmit={handleCreateOrder} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div className="space-y-4">
               <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5 font-display">
                 <FileText size={18} className="text-amber-600" />
                 3. Motivo e Inicio del Servicio
