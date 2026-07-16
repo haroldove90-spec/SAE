@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
-  Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck
+  Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck,
+  Camera, Upload, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
 
@@ -78,6 +79,83 @@ export default function AdvisorDashboard({
     extinguisher: false,
     photos: []
   });
+
+  // Live camera and device photo capture states & handlers
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    setShowCameraModal(true);
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+      setCameraStream(mediaStream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      }, 150);
+    } catch (err: any) {
+      console.error("Camera access error:", err);
+      setCameraError("No se pudo acceder a la cámara en vivo. El navegador puede requerir HTTPS o permisos especiales. Se recomienda usar la subida de fotos que automáticamente activa la cámara nativa en tu móvil.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCameraModal(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUri = canvas.toDataURL('image/jpeg', 0.85);
+        setChecklist(prev => ({
+          ...prev,
+          photos: [...prev.photos, dataUri]
+        }));
+      }
+      stopCamera();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      Array.from(e.target.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            const base64String = reader.result;
+            setChecklist(prev => ({
+              ...prev,
+              photos: [...prev.photos, base64String]
+            }));
+          }
+        };
+        reader.readAsDataURL(file as File);
+      });
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setChecklist(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
 
   // Quotation selected order
   const [selectedOrderId, setSelectedOrderId] = useState(orders[0]?.id || '');
@@ -426,110 +504,365 @@ export default function AdvisorDashboard({
           </div>
 
           {/* STEP 2: Checklist & walkaround */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5 font-display">
-              <CheckSquare size={18} className="text-amber-600" />
-              2. Checklist e Inventario Visual
-            </h4>
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <h4 className="font-bold text-slate-800 flex items-center gap-2 font-display text-sm md:text-base">
+                <CheckSquare size={20} className="text-amber-600" />
+                2. Checklist e Inventario de Entrada
+              </h4>
+              <span className="text-[10px] bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                <Sparkles size={11} /> Auditoría Completa
+              </span>
+            </div>
 
-            {/* Stylized damage map mock */}
-            <div className="border border-slate-200 p-3 rounded-xl bg-slate-50 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700">Mapa de Daños Carrocería</span>
-                <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1"><Sparkles size={10} /> Toque para registrar</span>
+            {/* Interactive Car Damage Blueprint Map */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Mapa de Daños de Carrocería</span>
+                <span className="text-[10px] text-slate-400 italic">Haz clic en los botones para registrar daños</span>
               </div>
               
-              {/* Graphic walkaround simulator */}
-              <div className="bg-white border border-slate-100 rounded-lg py-4 px-2 flex justify-around items-center">
-                <button 
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, scratches: !prev.scratches }))}
-                  className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
-                    checklist.scratches ? 'bg-red-50 border-red-300 text-red-600' : 'border-slate-100 text-slate-400'
-                  }`}
-                >
-                  <span className="text-[10px] font-bold">Rayones (Frente)</span>
-                  <span className="text-[9px] font-mono mt-1 px-1 bg-slate-100 rounded">{checklist.scratches ? 'SÍ' : 'NO'}</span>
-                </button>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Visual Front/Rear/Side Toggles */}
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center space-y-3">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Inspección de Daños</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setChecklist(prev => ({ ...prev, scratches: !prev.scratches }))}
+                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                        checklist.scratches 
+                          ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
+                          : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        checklist.scratches ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        <Sparkles size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold leading-tight">Rayones</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{checklist.scratches ? 'Reportado' : 'Ninguno'}</p>
+                      </div>
+                    </button>
 
-                <button 
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, dents: !prev.dents }))}
-                  className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
-                    checklist.dents ? 'bg-red-50 border-red-300 text-red-600' : 'border-slate-100 text-slate-400'
-                  }`}
-                >
-                  <span className="text-[10px] font-bold">Golpes / Abollado</span>
-                  <span className="text-[9px] font-mono mt-1 px-1 bg-slate-100 rounded">{checklist.dents ? 'SÍ' : 'NO'}</span>
-                </button>
+                    <button 
+                      type="button"
+                      onClick={() => setChecklist(prev => ({ ...prev, dents: !prev.dents }))}
+                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                        checklist.dents 
+                          ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
+                          : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                        checklist.dents ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
+                      }`}>
+                        <AlertTriangle size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold leading-tight">Golpes</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{checklist.dents ? 'Reportado' : 'Ninguno'}</p>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-white p-2.5 rounded-lg border border-slate-100">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                    <span>Los daños se registrarán de forma permanente en el expediente técnico.</span>
+                  </div>
+                </div>
+
+                {/* Car Silhouette Diagram representation */}
+                <div className="border border-slate-100 rounded-xl p-4 bg-slate-900 flex flex-col items-center justify-center relative min-h-[140px] overflow-hidden">
+                  {/* Subtle technical background grid */}
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
+                  
+                  {/* Top-down abstract blueprint car skeleton */}
+                  <div className="w-44 h-16 relative flex items-center justify-center select-none pointer-events-none">
+                    {/* Abstract outline */}
+                    <div className="absolute w-40 h-14 border-2 border-slate-600 rounded-xl flex justify-between items-center px-1">
+                      {/* wheels */}
+                      <div className="absolute -top-1 left-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
+                      <div className="absolute -top-1 right-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
+                      <div className="absolute -bottom-1 left-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
+                      <div className="absolute -bottom-1 right-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
+                      
+                      {/* cabin windshield */}
+                      <div className="absolute left-10 right-10 top-2 bottom-2 border border-slate-700/60 rounded flex items-center justify-center bg-slate-800/20">
+                        <span className="text-[7px] text-slate-600 font-mono">CABIN</span>
+                      </div>
+                    </div>
+                    {/* front grid */}
+                    <div className="absolute left-0 w-2 h-8 border border-slate-600 bg-slate-800 rounded-l flex items-center justify-center"></div>
+                    {/* rear trunk */}
+                    <div className="absolute right-0 w-2 h-8 border border-slate-600 bg-slate-800 rounded-r"></div>
+                    
+                    {/* Status lights on top of blueprint if damage active */}
+                    {checklist.scratches && (
+                      <div className="absolute left-4 top-2 w-3.5 h-3.5 rounded-full bg-rose-500/30 animate-ping flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                      </div>
+                    )}
+                    {checklist.dents && (
+                      <div className="absolute right-8 bottom-2 w-3.5 h-3.5 rounded-full bg-rose-500/30 animate-ping flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[9px] text-slate-400 font-mono mt-3 uppercase tracking-wider">Esquema Técnico de Carrocería</span>
+                </div>
               </div>
             </div>
 
-            {/* Fuel Slider */}
-            <div className="space-y-1.5 text-xs">
+            {/* Premium Interactive Gas Tank Needle Gauge */}
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
               <div className="flex justify-between items-center">
-                <label className="text-slate-500 font-medium">Nivel de Combustible</label>
-                <span className="font-bold text-amber-600 font-mono">{checklist.fuelLevel}% Tanque</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Nivel de Combustible</span>
+                  <span className="text-[11px] text-slate-400">Verifica el nivel del tanque actual</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200/50 px-2.5 py-0.5 rounded-full">
+                  <div className={`w-2 h-2 rounded-full ${checklist.fuelLevel <= 25 ? 'bg-red-500' : checklist.fuelLevel <= 50 ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                  <span className="font-bold text-slate-800 text-xs font-mono">{checklist.fuelLevel}% Tanque</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="25"
-                value={checklist.fuelLevel}
-                onChange={(e) => setChecklist(prev => ({ ...prev, fuelLevel: parseInt(e.target.value) }))}
-                className="w-full accent-amber-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="flex justify-between text-[9px] text-slate-400 font-mono px-1">
-                <span>Vacío</span>
-                <span>1/4</span>
-                <span>Medio</span>
-                <span>3/4</span>
-                <span>Lleno</span>
+
+              {/* Graphical Needle SVG Gauge */}
+              <div className="flex flex-col items-center justify-center py-1">
+                <svg className="w-44 h-22 overflow-visible" viewBox="0 0 100 50">
+                  <defs>
+                    <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#ef4444" />
+                      <stop offset="25%" stopColor="#f97316" />
+                      <stop offset="50%" stopColor="#eab308" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Outer curved arc */}
+                  <path 
+                    d="M 15,45 A 35,35 0 0,1 85,45" 
+                    fill="none" 
+                    stroke="#e2e8f0" 
+                    strokeWidth="8" 
+                    strokeLinecap="round" 
+                  />
+                  
+                  {/* Colored indicator arc overlay */}
+                  <path 
+                    d="M 15,45 A 35,35 0 0,1 85,45" 
+                    fill="none" 
+                    stroke="url(#gauge-grad)" 
+                    strokeWidth="7" 
+                    strokeLinecap="round" 
+                    strokeDasharray={`${(checklist.fuelLevel / 100) * 110} 110`}
+                    className="transition-all duration-500 ease-out"
+                  />
+                  
+                  {/* Gauge ticks */}
+                  <text x="11" y="49" className="text-[4px] font-bold font-mono fill-slate-400">E</text>
+                  <text x="21" y="27" className="text-[4px] font-bold font-mono fill-slate-400">1/4</text>
+                  <text x="47" y="14" className="text-[4px] font-bold font-mono fill-slate-400">1/2</text>
+                  <text x="74" y="27" className="text-[4px] font-bold font-mono fill-slate-400">3/4</text>
+                  <text x="86" y="49" className="text-[4px] font-bold font-mono fill-slate-400">F</text>
+                  
+                  {/* Pivot center */}
+                  <circle cx="50" cy="45" r="3" fill="#334155" />
+                  <circle cx="50" cy="45" r="1" fill="#ffffff" />
+                  
+                  {/* Needle */}
+                  <line 
+                    x1="50" 
+                    y1="45" 
+                    x2={50 + 28 * Math.cos((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)}
+                    y2={45 + 28 * Math.sin((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)}
+                    stroke="#1e293b" 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round"
+                    className="transition-all duration-500 ease-out origin-[50px_45px]"
+                  />
+                </svg>
+
+                {/* Slider selector dots */}
+                <div className="w-full max-w-sm mt-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="25"
+                    value={checklist.fuelLevel}
+                    onChange={(e) => setChecklist(prev => ({ ...prev, fuelLevel: parseInt(e.target.value) }))}
+                    className="w-full accent-amber-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between items-center text-[9px] font-bold mt-2 px-1 gap-1">
+                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 0 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 0 ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Vacío (0%)</button>
+                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 25 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 25 ? 'bg-orange-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>1/4 (25%)</button>
+                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 50 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 50 ? 'bg-amber-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Medio (50%)</button>
+                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 75 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 75 ? 'bg-lime-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>3/4 (75%)</button>
+                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 100 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 100 ? 'bg-emerald-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Lleno (100%)</button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Tools checklist */}
-            <div className="space-y-2 pt-2 text-xs">
-              <label className="block text-slate-500 font-medium">Herramientas y Accesorios a bordo</label>
-              <div className="grid grid-cols-2 gap-2 font-semibold text-slate-700">
-                <label className="flex items-center gap-2 p-1.5 border border-slate-100 hover:bg-slate-50 rounded-lg cursor-pointer">
+            {/* Accessories Checklist - Styled Cards */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wide block">Herramientas y Accesorios a bordo</span>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setChecklist(prev => ({ ...prev, tools: !prev.tools }))}
+                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
+                    checklist.tools 
+                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
+                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <span className="truncate">Herramienta básica</span>
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                    checklist.tools ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
+                  }`}>
+                    <Check size={10} strokeWidth={3} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChecklist(prev => ({ ...prev, spareTire: !prev.spareTire }))}
+                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
+                    checklist.spareTire 
+                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
+                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <span className="truncate">Llanta refacción</span>
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                    checklist.spareTire ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
+                  }`}>
+                    <Check size={10} strokeWidth={3} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChecklist(prev => ({ ...prev, jack: !prev.jack }))}
+                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
+                    checklist.jack 
+                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
+                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <span className="truncate">Gato hidráulico</span>
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                    checklist.jack ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
+                  }`}>
+                    <Check size={10} strokeWidth={3} />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChecklist(prev => ({ ...prev, extinguisher: !prev.extinguisher }))}
+                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
+                    checklist.extinguisher 
+                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
+                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <span className="truncate">Extintor</span>
+                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                    checklist.extinguisher ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
+                  }`}>
+                    <Check size={10} strokeWidth={3} />
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Photographic Evidence Uplink Block */}
+            <div className="space-y-4 pt-3 border-t border-slate-100">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1">
+                    <Camera size={14} className="text-slate-500" />
+                    Fotografías de Evidencia
+                  </span>
+                  <span className="text-[11px] text-slate-400">Captura o sube el estado del auto</span>
+                </div>
+                {checklist.photos.length > 0 && (
+                  <span className="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full text-[10px] font-mono">
+                    {checklist.photos.length} {checklist.photos.length === 1 ? 'Foto' : 'Fotos'}
+                  </span>
+                )}
+              </div>
+
+              {/* Upload & Camera Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Camera Trigger for Browser */}
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-md group active:scale-95"
+                >
+                  <Camera size={14} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                  <span>Cámara en Vivo</span>
+                </button>
+
+                {/* Upload / Native Camera Capture Trigger for Mobile Device */}
+                <label
+                  htmlFor="camera-capture-input"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-md group active:scale-95 text-center"
+                >
+                  <Upload size={14} className="group-hover:translate-y-[-1px] transition-transform" />
+                  <span>Cámara Móvil / Subir</span>
                   <input
-                    type="checkbox"
-                    checked={checklist.tools}
-                    onChange={(e) => setChecklist(prev => ({ ...prev, tools: e.target.checked }))}
-                    className="accent-amber-600"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="camera-capture-input"
                   />
-                  Herramienta básica
-                </label>
-                <label className="flex items-center gap-2 p-1.5 border border-slate-100 hover:bg-slate-50 rounded-lg cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checklist.spareTire}
-                    onChange={(e) => setChecklist(prev => ({ ...prev, spareTire: e.target.checked }))}
-                    className="accent-amber-600"
-                  />
-                  Llanta refacción
-                </label>
-                <label className="flex items-center gap-2 p-1.5 border border-slate-100 hover:bg-slate-50 rounded-lg cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checklist.jack}
-                    onChange={(e) => setChecklist(prev => ({ ...prev, jack: e.target.checked }))}
-                    className="accent-amber-600"
-                  />
-                  Gato hidráulico
-                </label>
-                <label className="flex items-center gap-2 p-1.5 border border-slate-100 hover:bg-slate-50 rounded-lg cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checklist.extinguisher}
-                    onChange={(e) => setChecklist(prev => ({ ...prev, extinguisher: e.target.checked }))}
-                    className="accent-amber-600"
-                  />
-                  Extintor
                 </label>
               </div>
+
+              {/* Photo Evidence Gallery */}
+              {checklist.photos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 max-h-[140px] overflow-y-auto">
+                  {checklist.photos.map((photo, index) => (
+                    <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-slate-250 group bg-slate-950">
+                      <img 
+                        src={photo} 
+                        alt={`Evidencia ${index + 1}`} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-700 text-white p-1 rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-md"
+                        title="Eliminar foto"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                      <span className="absolute bottom-1 left-1 bg-black/60 text-white px-1 py-0.5 rounded text-[8px] font-mono leading-none">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-dashed border-slate-200 rounded-xl p-4 text-center flex flex-col items-center justify-center bg-slate-50/50">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                    <Camera size={16} />
+                  </div>
+                  <p className="text-xs font-bold text-slate-700">Sin Evidencia Fotográfica</p>
+                  <p className="text-[10px] text-slate-400 max-w-[200px] mt-0.5 mx-auto">Toma fotos en vivo o súbelas como auditoría física.</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1175,6 +1508,79 @@ export default function AdvisorDashboard({
                   </div>
                 );
               })}
+          </div>
+        </div>
+      )}
+      {/* Live Camera Modal Overlay */}
+      {showCameraModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-slate-900 px-5 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <Camera size={18} className="text-amber-500 animate-pulse" />
+                <h3 className="font-bold text-sm md:text-base font-display">Cámara de Auditoría en Vivo</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={stopCamera}
+                className="text-slate-400 hover:text-white transition-colors bg-slate-800 p-1 rounded-full"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Video / Error view */}
+            <div className="flex-1 bg-slate-950 flex flex-col justify-center items-center relative aspect-video min-h-[260px]">
+              {cameraError ? (
+                <div className="p-6 text-center text-rose-200 max-w-sm space-y-3">
+                  <div className="w-12 h-12 bg-rose-500/15 rounded-full flex items-center justify-center text-rose-500 mx-auto">
+                    <AlertTriangle size={24} />
+                  </div>
+                  <p className="text-xs font-bold font-display">Error de Inicialización</p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{cameraError}</p>
+                </div>
+              ) : (
+                <>
+                  <video 
+                    ref={videoRef}
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Visual overlay reticle */}
+                  <div className="absolute inset-8 border border-white/20 rounded-xl pointer-events-none flex items-center justify-center">
+                    <div className="w-6 h-6 border-t-2 border-l-2 border-amber-500 absolute top-0 left-0"></div>
+                    <div className="w-6 h-6 border-t-2 border-r-2 border-amber-500 absolute top-0 right-0"></div>
+                    <div className="w-6 h-6 border-b-2 border-l-2 border-amber-500 absolute bottom-0 left-0"></div>
+                    <div className="w-6 h-6 border-b-2 border-r-2 border-amber-500 absolute bottom-0 right-0"></div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer control bar */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all"
+              >
+                Cancelar
+              </button>
+
+              {!cameraError && (
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-md shadow-amber-500/10"
+                >
+                  <Camera size={14} />
+                  <span>Capturar Foto</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
