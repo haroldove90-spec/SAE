@@ -10,14 +10,22 @@ interface CustomerPortalProps {
   vehicles: Vehicle[];
   orders: ServiceOrder[];
   approveBudgetLine: (orderId: string, itemId: string, approved: boolean) => void;
+  activeTab?: 'tracking' | 'budget' | 'alerts';
+  setActiveTab?: (tab: 'tracking' | 'budget' | 'alerts') => void;
 }
 
 export default function CustomerPortal({
   clients,
   vehicles,
   orders,
-  approveBudgetLine
+  approveBudgetLine,
+  activeTab: controlledActiveTab,
+  setActiveTab: controlledSetActiveTab
 }: CustomerPortalProps) {
+  const [localActiveTab, setLocalActiveTab] = useState<'tracking' | 'budget' | 'alerts'>('tracking');
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
+  const setActiveTab = controlledSetActiveTab !== undefined ? controlledSetActiveTab : setLocalActiveTab;
+
   // Let the user pick which customer perspective to view
   const [selectedClientId, setSelectedClientId] = useState('cli-1'); // Default: Alejandro González (VW Jetta)
   const activeClient = clients.find(c => c.id === selectedClientId);
@@ -181,7 +189,7 @@ export default function CustomerPortal({
           <div className="lg:col-span-2 space-y-6">
             {/* Realtime Repair Tracking */}
             {activeServiceOrder ? (
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+              <div className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6 ${activeTab === 'tracking' ? 'block' : 'hidden lg:block'}`}>
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div>
                     <span className="bg-amber-100 text-amber-800 font-mono text-[10px] font-bold px-2 py-0.5 rounded">
@@ -254,7 +262,7 @@ export default function CustomerPortal({
 
             {/* BUDGET APPROVAL SYSTEM */}
             {activeServiceOrder && activeServiceOrder.items.some(i => i.approved === null) && (
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 ${activeTab === 'budget' ? 'block' : 'hidden lg:block'}`}>
                 <div className="border-b border-slate-100 pb-2">
                   <div className="flex items-center gap-1.5 text-amber-600">
                     <ShieldAlert size={18} />
@@ -308,7 +316,7 @@ export default function CustomerPortal({
             )}
 
             {/* PREVIOUS COMPLETED SERVICE HISTORY (CARNET DIGITAL) */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div className={`bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 ${activeTab === 'tracking' ? 'block' : 'hidden lg:block'}`}>
               <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 font-display">
                 Carnet de Mantenimiento Digital (Historial)
               </h4>
@@ -346,7 +354,7 @@ export default function CustomerPortal({
           {/* LOCAL SMART ALERTS & REMINDERS SIDEBAR */}
           <div className="space-y-6">
             {/* Local CDMX/Edomex verification details */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div className={`bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 ${activeTab === 'alerts' ? 'block' : 'hidden lg:block'}`}>
               <div className="flex items-center gap-1.5 text-indigo-600 border-b border-slate-100 pb-2">
                 <BellRing size={18} className="animate-pulse" />
                 <h4 className="font-bold text-slate-800 font-display">Alertas Inteligentes Locales</h4>
@@ -383,7 +391,7 @@ export default function CustomerPortal({
 
             {/* INVOICES & PAYMENTS STATEMENT */}
             {activeServiceOrder && (
-              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <div className={`bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 ${activeTab === 'budget' ? 'block' : 'hidden lg:block'}`}>
                 <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 font-display flex items-center gap-1.5">
                   <Wallet size={16} className="text-indigo-600" />
                   Estado de Cuenta & Facturas

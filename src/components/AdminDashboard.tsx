@@ -21,6 +21,8 @@ interface AdminDashboardProps {
   addTransaction: (t: Omit<Transaction, 'id' | 'date'>) => void;
   handleClientCreditPayment: (clientId: string, amount: number, method: 'Efectivo' | 'Tarjeta' | 'Transferencia') => void;
   resetDatabase: () => void;
+  activeTab?: 'metrics' | 'finances' | 'personnel' | 'config';
+  setActiveTab?: (tab: 'metrics' | 'finances' | 'personnel' | 'config') => void;
 }
 
 export default function AdminDashboard({
@@ -38,9 +40,13 @@ export default function AdminDashboard({
   updateEmployee,
   addTransaction,
   handleClientCreditPayment,
-  resetDatabase
+  resetDatabase,
+  activeTab: controlledActiveTab,
+  setActiveTab: controlledSetActiveTab
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>('metrics');
+  const [localActiveTab, setLocalActiveTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>('metrics');
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
+  const setActiveTab = controlledSetActiveTab !== undefined ? controlledSetActiveTab : setLocalActiveTab;
   
   // Financial metrics calculations
   const totalIncome = transactions

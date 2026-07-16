@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, User, Wrench, Package, Car, Laptop, Clock, 
   Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle,
-  Smartphone, Download, X, Home, LogOut
+  Smartphone, Download, X, Home, LogOut, TrendingUp, DollarSign, Users,
+  FileText, Calendar, History, ListFilter, BellRing
 } from 'lucide-react';
 import { useWorkshopState } from './useWorkshopState';
 import { UserRole } from './types';
@@ -67,6 +68,73 @@ export default function App() {
   
   // Landing page active state
   const [showLanding, setShowLanding] = useState(true);
+
+  // Persistent active tabs for each role, allowing persistent selection between role switches!
+  const [adminTab, setAdminTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>('metrics');
+  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'agenda' | 'crm'>('reception');
+  const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>('tasks');
+  const [warehouseTab, setWarehouseTab] = useState<'catalog' | 'requisitions' | 'purchases'>('catalog');
+  const [clientTab, setClientTab] = useState<'tracking' | 'budget' | 'alerts'>('tracking');
+
+  // Define tab navigation details for each role
+  const getRoleTabs = () => {
+    switch(currentRole) {
+      case 'admin':
+        return [
+          { id: 'metrics', label: 'Métricas', icon: TrendingUp },
+          { id: 'finances', label: 'Finanzas', icon: DollarSign },
+          { id: 'personnel', label: 'Personal', icon: Users },
+          { id: 'config', label: 'Config', icon: Settings },
+        ];
+      case 'advisor':
+        return [
+          { id: 'reception', label: 'Recepción', icon: Car },
+          { id: 'quotes', label: 'Cotizaciones', icon: FileText },
+          { id: 'agenda', label: 'Agenda', icon: Calendar },
+          { id: 'crm', label: 'CRM', icon: History },
+        ];
+      case 'mechanic':
+        return [
+          { id: 'tasks', label: 'Tareas', icon: ListFilter },
+          { id: 'diagnostics', label: 'Diagnóstico', icon: Wrench },
+          { id: 'parts', label: 'Refacciones', icon: Package },
+        ];
+      case 'warehouse':
+        return [
+          { id: 'catalog', label: 'Catálogo', icon: Package },
+          { id: 'requisitions', label: 'Pedidos', icon: FileText },
+          { id: 'purchases', label: 'Compras', icon: Download },
+        ];
+      case 'client':
+        return [
+          { id: 'tracking', label: 'Seguimiento', icon: Car },
+          { id: 'budget', label: 'Presupuesto', icon: DollarSign },
+          { id: 'alerts', label: 'Alertas CDMX', icon: BellRing },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const getActiveTabValue = () => {
+    switch(currentRole) {
+      case 'admin': return adminTab;
+      case 'advisor': return advisorTab;
+      case 'mechanic': return mechanicTab;
+      case 'warehouse': return warehouseTab;
+      case 'client': return clientTab;
+    }
+  };
+
+  const setActiveTabValue = (val: string) => {
+    switch(currentRole) {
+      case 'admin': setAdminTab(val as any); break;
+      case 'advisor': setAdvisorTab(val as any); break;
+      case 'mechanic': setMechanicTab(val as any); break;
+      case 'warehouse': setWarehouseTab(val as any); break;
+      case 'client': setClientTab(val as any); break;
+    }
+  };
   
   // Mobile responsive menu toggle
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -344,6 +412,8 @@ export default function App() {
                     addTransaction={addTransaction}
                     handleClientCreditPayment={handleClientCreditPayment}
                     resetDatabase={resetDatabase}
+                    activeTab={adminTab}
+                    setActiveTab={setAdminTab}
                   />
                 )}
 
@@ -362,6 +432,8 @@ export default function App() {
                     approveBudgetLine={approveBudgetLine}
                     registerOrderPayment={registerOrderPayment}
                     updateOrderStatus={updateOrderStatus}
+                    activeTab={advisorTab}
+                    setActiveTab={setAdvisorTab}
                   />
                 )}
 
@@ -378,6 +450,8 @@ export default function App() {
                     updateOrderDiagnostics={updateOrderDiagnostics}
                     submitPartRequisition={submitPartRequisition}
                     updateOrderStatus={updateOrderStatus}
+                    activeTab={mechanicTab}
+                    setActiveTab={setMechanicTab}
                   />
                 )}
 
@@ -395,6 +469,8 @@ export default function App() {
                     receivePurchaseOrder={receivePurchaseOrder}
                     handleRequisitionStatus={handleRequisitionStatus}
                     addSupplier={addSupplier}
+                    activeTab={warehouseTab}
+                    setActiveTab={setWarehouseTab}
                   />
                 )}
 
@@ -404,6 +480,8 @@ export default function App() {
                     vehicles={vehicles}
                     orders={orders}
                     approveBudgetLine={approveBudgetLine}
+                    activeTab={clientTab}
+                    setActiveTab={setClientTab}
                   />
                 )}
               </motion.div>
@@ -497,40 +575,34 @@ export default function App() {
       {!showLanding && (
         <div className="fixed bottom-0 left-0 right-0 bg-[#010101]/95 backdrop-blur-md border-t-2 border-[#8D6A28]/50 py-1.5 px-2 sm:px-4 shadow-2xl z-40 block">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-6 gap-1 w-full text-center">
+            <div className={`grid ${currentRole === 'admin' || currentRole === 'advisor' ? 'grid-cols-5' : 'grid-cols-4'} gap-1 w-full text-center`}>
               
-              {/* Logout / Salir Button */}
+              {/* Home/Roles Button */}
               <button
                 onClick={() => setShowLanding(true)}
-                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-slate-300 hover:text-white hover:bg-white/5 cursor-pointer"
                 title="Cerrar Sesión y Cambiar de Rol"
               >
-                <LogOut className="w-5 h-5 sm:w-4 sm:h-4 text-red-500 shrink-0" />
-                <span className="text-[9px] sm:text-xs font-bold">Salir / Rol</span>
+                <Home className="w-5 h-5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
+                <span className="text-[9px] sm:text-xs font-bold">Inicio / Rol</span>
               </button>
 
-              {/* Roles Buttons */}
-              {[
-                { id: 'admin', label: 'Admin', icon: Shield },
-                { id: 'advisor', label: 'Asesor', icon: User },
-                { id: 'mechanic', label: 'Mecánico', icon: Wrench },
-                { id: 'warehouse', label: 'Almacén', icon: Package },
-                { id: 'client', label: 'Cliente', icon: Car }
-              ].map((item) => {
+              {/* Module Buttons for current role */}
+              {getRoleTabs().map((item) => {
                 const IconComponent = item.icon;
-                const isActive = currentRole === item.id;
+                const isActive = getActiveTabValue() === item.id;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setCurrentRole(item.id as UserRole)}
+                    onClick={() => setActiveTabValue(item.id)}
                     className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all cursor-pointer ${
                       isActive 
                         ? 'bg-[#8D6A28] text-white border border-white/10 shadow-lg shadow-[#8D6A28]/10' 
                         : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <IconComponent className="w-5 h-5 sm:w-4 sm:h-4" />
-                    <span className="text-[9px] sm:text-xs font-bold">{item.label}</span>
+                    <IconComponent className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+                    <span className="text-[9px] sm:text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
                   </button>
                 );
               })}
