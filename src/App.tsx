@@ -418,6 +418,9 @@ export default function App() {
         <p className="max-w-2xl mx-auto">
           <strong>Servicio Automotriz Especializado (SAE) Dashboard</strong> • Desarrollado con los más altos estándares de fidelidad y usabilidad interactiva. Sincronización local persistente en tiempo real.
         </p>
+        <p className="text-[11px] font-semibold text-slate-500">
+          Programa desarrollado por <span className="text-amber-500">App Design</span> - D.G. Harold Anguiano
+        </p>
         <p className="font-mono text-[10px]">
           Simulación de Operación Mecánica • Port 3000 • CDMX Verificación Vehicular Integrada • Licencia Comercial SAE
         </p>

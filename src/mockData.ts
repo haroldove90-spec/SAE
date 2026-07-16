@@ -601,8 +601,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
 export const INITIAL_SETTINGS: WorkshopSettings = {
   name: 'Servicio Automotriz Especializado (SAE)',
   rfc: 'SAE150820MX7',
-  address: 'Av. Paseo de las Palmas 450, Lomas de Chapultepec, Miguel Hidalgo, 11000 CDMX',
-  phone: '55-5555-9000',
+  address: 'Mixtecas 288, Ajusco, Coyoacán, 04300 Ciudad de México, CDMX',
+  phone: '55 1384 6680',
   email: 'contacto@servicioautomotriz.com.mx',
   logoUrl: 'https://appdesignproyectos.com/sre.png', // Logo provided by user
   terms: '1. Toda cotización tiene una vigencia de 15 días naturales.\n2. No nos hacemos responsables por objetos de valor no registrados en el inventario/checklist de entrada.\n3. Los vehículos con más de 48 horas de listos sin ser retirados causarán un costo de resguardo de $150 MXN por día.',

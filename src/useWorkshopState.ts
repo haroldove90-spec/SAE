@@ -48,7 +48,12 @@ export function useWorkshopState() {
     setRequisitions(localRequisitions ? JSON.parse(localRequisitions) : INITIAL_REQUISITIONS);
     setOrders(localOrders ? JSON.parse(localOrders) : INITIAL_ORDERS);
     setTransactions(localTransactions ? JSON.parse(localTransactions) : INITIAL_TRANSACTIONS);
-    setSettings(localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS);
+    let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
+    if (parsedSettings && parsedSettings.address && (parsedSettings.address.includes('Palmas') || parsedSettings.address.includes('palmas'))) {
+      parsedSettings.address = INITIAL_SETTINGS.address;
+      parsedSettings.phone = INITIAL_SETTINGS.phone;
+    }
+    setSettings(parsedSettings);
     setLoaded(true);
   }, []);
 
