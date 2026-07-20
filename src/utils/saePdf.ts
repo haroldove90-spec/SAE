@@ -2,12 +2,16 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { ServiceOrder, Client, Vehicle, Employee } from '../types';
 
-export async function generateSaePdf(
+/**
+ * Returns the raw HTML string representing the official SAE reception form,
+ * styled exactly like the physical paper.
+ */
+export function getSaeHtml(
   order: ServiceOrder,
   client: Client | undefined,
   vehicle: Vehicle | undefined,
   employees: Employee[]
-) {
+): string {
   // Find employee names
   const advisorName = employees.find(e => e.id === order.advisorId)?.name || 'Asesor de Guardia';
   const mechanicName = order.tecnico || employees.find(e => e.id === order.mechanicId)?.name || 'Mecánico Asignado';
@@ -16,24 +20,6 @@ export async function generateSaePdf(
   const dateStr = order.fecha || order.dateOpened.split(' ')[0] || new Date().toISOString().split('T')[0];
   const timeStr = order.hora || (order.dateOpened.split(' ').length > 1 ? order.dateOpened.split(' ')[1].substring(0, 5) : '10:00');
 
-  // Create a container styled as a letter page
-  const container = document.createElement('div');
-  container.id = 'sae-pdf-render-root';
-  container.style.position = 'fixed';
-  container.style.left = '0px';
-  container.style.top = '0px';
-  container.style.width = '800px';
-  container.style.padding = '35px 40px';
-  container.style.backgroundColor = '#FFFFFF';
-  container.style.color = '#111827';
-  container.style.fontFamily = '"Inter", sans-serif';
-  container.style.fontSize = '11px';
-  container.style.lineHeight = '1.4';
-  container.style.zIndex = '-9999';
-  container.style.opacity = '0.99'; // Visual overlay behind other elements but laid out fully
-  container.style.pointerEvents = 'none';
-
-  // Hex Colors
   const crimson = '#A21C26'; // exact rich crimson of the form
 
   // Checkbox helpers
@@ -50,7 +36,7 @@ export async function generateSaePdf(
     `;
   };
 
-  container.innerHTML = `
+  return `
     <!-- Header Section -->
     <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; margin-bottom: 12px !important; border-bottom: 2px solid ${crimson} !important; padding-bottom: 10px !important; background-color: transparent !important;">
       <div style="display: flex !important; align-items: center !important; gap: 12px !important; background-color: transparent !important;">
@@ -279,44 +265,264 @@ export async function generateSaePdf(
       </div>
     </div>
   `;
+}
 
-  // Append container to body
+/**
+ * Downloads the SAE work order as a beautiful high-fidelity PDF.
+ */
+export async function generateSaePdf(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[]
+): Promise<void> {
+  const container = document.createElement('div');
+  container.id = 'sae-pdf-render-root';
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.width = '800px';
+  container.style.padding = '35px 40px';
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.color = '#111827';
+  container.style.fontFamily = '"Inter", sans-serif';
+  container.style.fontSize = '11px';
+  container.style.lineHeight = '1.4';
+  container.style.zIndex = '-9999';
+  container.style.opacity = '0.99';
+  container.style.pointerEvents = 'none';
+
+  container.innerHTML = getSaeHtml(order, client, vehicle, employees);
   document.body.appendChild(container);
 
   try {
-    // Generate canvas
     const canvas = await html2canvas(container, {
-      scale: 2, // higher resolution
+      scale: 2,
       useCORS: true,
       backgroundColor: '#FFFFFF',
       logging: false
     });
 
-    // Create jsPDF instance
     const imgData = canvas.toDataURL('image/png');
-    
-    // Letter size: 216mm x 279mm
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'letter'
     });
 
-    const imgWidth = 216; // fit full width
+    const imgWidth = 216;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    // Add image to PDF
     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    
-    // Save the PDF
+
     const filename = `Orden_SAE_Folio_${order.folio || order.id.replace('OS-', '')}.pdf`;
     pdf.save(filename);
-
   } catch (error) {
     console.error('Error generating SAE Order PDF:', error);
     alert('Ocurrió un error al generar el PDF. Por favor reintente.');
   } finally {
-    // Cleanup container
     document.body.removeChild(container);
+  }
+}
+
+/**
+ * Generates and returns a PDF file binary as a Blob.
+ */
+export async function generateSaePdfBlob(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[]
+): Promise<Blob | null> {
+  const container = document.createElement('div');
+  container.id = 'sae-pdf-render-root-pdf-blob';
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.width = '800px';
+  container.style.padding = '35px 40px';
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.color = '#111827';
+  container.style.fontFamily = '"Inter", sans-serif';
+  container.style.fontSize = '11px';
+  container.style.lineHeight = '1.4';
+  container.style.zIndex = '-9999';
+  container.style.opacity = '0.99';
+  container.style.pointerEvents = 'none';
+
+  container.innerHTML = getSaeHtml(order, client, vehicle, employees);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#FFFFFF',
+      logging: false
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
+
+    const imgWidth = 216;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+    return pdf.output('blob');
+  } catch (error) {
+    console.error('Error generating SAE PDF blob:', error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+/**
+ * Generates and returns a PNG Image file binary as a Blob.
+ */
+export async function generateSaeImageBlob(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[]
+): Promise<Blob | null> {
+  const container = document.createElement('div');
+  container.id = 'sae-pdf-render-root-image';
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.width = '800px';
+  container.style.padding = '35px 40px';
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.color = '#111827';
+  container.style.fontFamily = '"Inter", sans-serif';
+  container.style.fontSize = '11px';
+  container.style.lineHeight = '1.4';
+  container.style.zIndex = '-9999';
+  container.style.opacity = '0.99';
+  container.style.pointerEvents = 'none';
+
+  container.innerHTML = getSaeHtml(order, client, vehicle, employees);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#FFFFFF',
+      logging: false
+    });
+    
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  } catch (error) {
+    console.error('Error generating SAE image blob:', error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+/**
+ * Downloads the SAE work order as a high-fidelity PNG image.
+ */
+export async function downloadSaeImage(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[]
+): Promise<void> {
+  const blob = await generateSaeImageBlob(order, client, vehicle, employees);
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Orden_SAE_Folio_${order.folio || order.id.replace('OS-', '')}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Copies the SAE work order image directly into the user's Clipboard.
+ * This allows quick "Paste (Ctrl+V)" inside WhatsApp Web or Email clients.
+ */
+export async function copySaeImageToClipboard(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[]
+): Promise<boolean> {
+  try {
+    const blob = await generateSaeImageBlob(order, client, vehicle, employees);
+    if (!blob) return false;
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'image/png': blob
+      })
+    ]);
+    return true;
+  } catch (error) {
+    console.error('Error copying SAE image to clipboard:', error);
+    return false;
+  }
+}
+
+/**
+ * Shares the document using the native Web Share API (mostly on mobile devices).
+ */
+export async function shareSaeOrderMobile(
+  order: ServiceOrder,
+  client: Client | undefined,
+  vehicle: Vehicle | undefined,
+  employees: Employee[],
+  type: 'pdf' | 'png' = 'pdf'
+): Promise<boolean> {
+  try {
+    if (type === 'pdf') {
+      const pdfBlob = await generateSaePdfBlob(order, client, vehicle, employees);
+      if (!pdfBlob) return false;
+      const file = new File(
+        [pdfBlob],
+        `Orden_SAE_Folio_${order.folio || order.id.replace('OS-', '')}.pdf`,
+        { type: 'application/pdf' }
+      );
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Orden SAE Folio ${order.folio || order.id.replace('OS-', '')}`,
+          text: `Te compartimos la Orden de Entrada Digital de tu vehículo en SAE.`
+        });
+        return true;
+      }
+    } else {
+      const pngBlob = await generateSaeImageBlob(order, client, vehicle, employees);
+      if (!pngBlob) return false;
+      const file = new File(
+        [pngBlob],
+        `Orden_SAE_Folio_${order.folio || order.id.replace('OS-', '')}.png`,
+        { type: 'image/png' }
+      );
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Orden SAE Folio ${order.folio || order.id.replace('OS-', '')}`,
+          text: `Te compartimos la imagen de tu Orden de Entrada Digital de tu vehículo en SAE.`
+        });
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Error using Web Share API:', error);
+    return false;
   }
 }

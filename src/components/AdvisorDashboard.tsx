@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
   Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck,
-  Camera, Upload, Trash2, AlertTriangle, Download, Sparkle
+  Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail
 } from 'lucide-react';
 import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
-import { generateSaePdf } from '../utils/saePdf';
+import { 
+  generateSaePdf, 
+  generateSaeImageBlob, 
+  downloadSaeImage, 
+  copySaeImageToClipboard, 
+  shareSaeOrderMobile 
+} from '../utils/saePdf';
 import { SignaturePad } from './SignaturePad';
 
 interface AdvisorDashboardProps {
@@ -143,6 +149,11 @@ export default function AdvisorDashboard({
   const [successOrderFolio, setSuccessOrderFolio] = useState('');
   const [successClientPhone, setSuccessClientPhone] = useState('');
   const [successClientHasWhatsapp, setSuccessClientHasWhatsapp] = useState(true);
+  const [successOrder, setSuccessOrder] = useState<ServiceOrder | null>(null);
+  const [successClient, setSuccessClient] = useState<Client | null>(null);
+  const [successVehicle, setSuccessVehicle] = useState<Vehicle | null>(null);
+  const [copiedStatus, setCopiedStatus] = useState<'idle' | 'copying' | 'success' | 'error'>('idle');
+  const [sharingStatus, setSharingStatus] = useState<'idle' | 'sharing' | 'success' | 'unsupported'>('idle');
 
   // Synchronize edit states when selected client changes
   useEffect(() => {
@@ -392,14 +403,6 @@ export default function AdvisorDashboard({
       mechanicSignature: finalMechSig
     });
 
-    // Populate Success Modal states
-    setSuccessOrderId(created.id);
-    setSuccessOrderFolio(finalFolio);
-    setSuccessClientPhone(orderClientPhone);
-    setSuccessClientHasWhatsapp(clientHasWhatsapp);
-    setShowSaveSuccessModal(true);
-
-    // Automatically generate and download the entry sheet PDF to save staff time
     const freshClient = {
       ...(currentClient || { id: selectedClientId, name: 'Cliente', creditBalance: 0, creditLimit: 0 }),
       calle: orderClientCalle,
@@ -424,6 +427,16 @@ export default function AdvisorDashboard({
       year: orderVehYear,
       plate: orderVehPlate
     };
+
+    // Populate Success Modal states
+    setSuccessOrderId(created.id);
+    setSuccessOrderFolio(finalFolio);
+    setSuccessClientPhone(orderClientPhone);
+    setSuccessClientHasWhatsapp(clientHasWhatsapp);
+    setSuccessOrder(created);
+    setSuccessClient(freshClient);
+    setSuccessVehicle(freshVehicle);
+    setShowSaveSuccessModal(true);
 
     setTimeout(() => {
       generateSaePdf(created, freshClient, freshVehicle, employees);
@@ -2110,6 +2123,146 @@ export default function AdvisorDashboard({
                 </div>
               </div>
 
+              {/* COMPARTIR ORDEN DIGITAL (PDF / IMAGEN) PANEL */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-4">
+                <div>
+                  <h5 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-red-600 animate-pulse" />
+                    Opciones de Envío Digital (PDF e Imagen)
+                  </h5>
+                  <p className="text-[11px] text-slate-500 leading-normal mt-1">
+                    Envía la orden oficial de SAE de manera digital a tu cliente por WhatsApp o Correo.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Copy Image to Clipboard */}
+                  <button
+                    type="button"
+                    disabled={!successOrder}
+                    onClick={async () => {
+                      if (!successOrder) return;
+                      setCopiedStatus('copying');
+                      const ok = await copySaeImageToClipboard(successOrder, successClient || undefined, successVehicle || undefined, employees);
+                      if (ok) {
+                        setCopiedStatus('success');
+                        setTimeout(() => setCopiedStatus('idle'), 4000);
+                      } else {
+                        setCopiedStatus('error');
+                        setTimeout(() => setCopiedStatus('idle'), 3000);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                      copiedStatus === 'success' 
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : copiedStatus === 'copying'
+                        ? 'bg-slate-100 border-slate-200 text-slate-400 animate-pulse'
+                        : copiedStatus === 'error'
+                        ? 'bg-rose-50 border-rose-300 text-rose-700'
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm'
+                    }`}
+                  >
+                    {copiedStatus === 'success' ? (
+                      <>
+                        <Check size={14} className="text-emerald-500" />
+                        <span>¡Copiada en Portapapeles!</span>
+                      </>
+                    ) : copiedStatus === 'copying' ? (
+                      <span>Generando...</span>
+                    ) : copiedStatus === 'error' ? (
+                      <span>Error al copiar</span>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copiar Imagen a Portapapeles</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Download PNG */}
+                  <button
+                    type="button"
+                    disabled={!successOrder}
+                    onClick={async () => {
+                      if (!successOrder) return;
+                      await downloadSaeImage(successOrder, successClient || undefined, successVehicle || undefined, employees);
+                    }}
+                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs"
+                  >
+                    <Image size={14} />
+                    <span>Descargar Imagen PNG</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Share Native File (Web Share) */}
+                  <button
+                    type="button"
+                    disabled={!successOrder}
+                    onClick={async () => {
+                      if (!successOrder) return;
+                      setSharingStatus('sharing');
+                      let shared = await shareSaeOrderMobile(successOrder, successClient || undefined, successVehicle || undefined, employees, 'pdf');
+                      if (!shared) {
+                        shared = await shareSaeOrderMobile(successOrder, successClient || undefined, successVehicle || undefined, employees, 'png');
+                      }
+                      if (shared) {
+                        setSharingStatus('success');
+                        setTimeout(() => setSharingStatus('idle'), 3000);
+                      } else {
+                        setSharingStatus('unsupported');
+                        setTimeout(() => setSharingStatus('idle'), 4000);
+                      }
+                    }}
+                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                      sharingStatus === 'success'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                        : sharingStatus === 'sharing'
+                        ? 'bg-slate-100 border-slate-200 text-slate-400 animate-pulse'
+                        : sharingStatus === 'unsupported'
+                        ? 'bg-amber-50 border-amber-300 text-amber-700'
+                        : 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700 shadow-sm'
+                    }`}
+                  >
+                    {sharingStatus === 'success' ? (
+                      <>
+                        <Check size={14} className="text-emerald-500" />
+                        <span>¡Compartido!</span>
+                      </>
+                    ) : sharingStatus === 'sharing' ? (
+                      <span>Generando...</span>
+                    ) : sharingStatus === 'unsupported' ? (
+                      <span>Soporte Móvil Inactivo</span>
+                    ) : (
+                      <>
+                        <Share2 size={14} />
+                        <span>Compartir (Móvil)</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Manual PDF download */}
+                  <button
+                    type="button"
+                    disabled={!successOrder}
+                    onClick={async () => {
+                      if (!successOrder) return;
+                      await generateSaePdf(successOrder, successClient || undefined, successVehicle || undefined, employees);
+                    }}
+                    className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-xs"
+                  >
+                    <Download size={14} />
+                    <span>Descargar PDF</span>
+                  </button>
+                </div>
+
+                {copiedStatus === 'success' && (
+                  <p className="text-[10px] text-emerald-600 bg-emerald-50 p-2.5 rounded-lg border border-emerald-100 leading-normal">
+                    💡 <strong>¡Súper Rápido!</strong> La imagen está copiada. Abre el chat de WhatsApp con el botón verde de abajo y presiona <strong>Ctrl+V</strong> (o pegar) para enviarle la orden digital completa en alta resolución de inmediato.
+                  </p>
+                )}
+              </div>
+
               {/* WhatsApp Notification Block */}
               {successClientHasWhatsapp ? (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 text-left">
@@ -2118,9 +2271,9 @@ export default function AdvisorDashboard({
                       <Send size={16} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-black text-emerald-800 uppercase tracking-wider">Envío Automático WhatsApp</p>
+                      <p className="text-xs font-black text-emerald-800 uppercase tracking-wider">Enviar por WhatsApp</p>
                       <p className="text-xs text-emerald-700 leading-relaxed">
-                        Se ha preparado la Orden de Entrada para enviarse al celular registrado del cliente: <strong className="font-bold text-emerald-900">{successClientPhone}</strong>.
+                        Se abrirá un enlace directo para enviar el mensaje al celular del cliente: <strong className="font-bold text-emerald-900">{successClientPhone}</strong>.
                       </p>
                     </div>
                   </div>
@@ -2128,13 +2281,13 @@ export default function AdvisorDashboard({
                   <button
                     type="button"
                     onClick={() => {
-                      const msg = `Hola, te compartimos tu Orden de Entrada de SAE con el Folio: ${successOrderFolio}. Puedes consultar tu estatus en tiempo real en nuestro portal. ¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
+                      const msg = `Hola, te compartimos tu Orden de Entrada Digital de SAE con el Folio: ${successOrderFolio}. ¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
                       window.open(`https://api.whatsapp.com/send?phone=52${successClientPhone}&text=${encodeURIComponent(msg)}`, '_blank');
                     }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-emerald-600/10 transition-all flex items-center justify-center gap-2 text-xs"
                   >
                     <Send size={14} />
-                    <span>Abrir WhatsApp Web y Enviar Mensaje</span>
+                    <span>Abrir Chat de WhatsApp</span>
                   </button>
                 </div>
               ) : (
@@ -2144,17 +2297,54 @@ export default function AdvisorDashboard({
                       <AlertCircle size={16} />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-black text-amber-800 uppercase tracking-wider">Aviso de No Envío (WhatsApp)</p>
+                      <p className="text-xs font-black text-amber-800 uppercase tracking-wider">Aviso de WhatsApp</p>
                       <p className="text-xs text-amber-700 leading-relaxed">
-                        El documento **no se ha enviado** por WhatsApp ya que se indicó que el cliente no cuenta con esta aplicación.
+                        El cliente se registró sin la casilla de WhatsApp activa. Sin embargo, si lo desea, puede forzar el envío al número registrado: <strong className="font-bold text-amber-900">{successClientPhone}</strong>.
                       </p>
                     </div>
                   </div>
-                  <div className="bg-amber-500/5 border border-amber-200/50 p-2.5 rounded-lg text-[11px] text-amber-800 leading-relaxed italic">
-                    💡 <strong>Información para el Asesor:</strong> Podrá enviar el documento en un futuro ingresando a la pestaña de consulta (CRM) o re-editando el teléfono móvil del cliente.
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msg = `Hola, te compartimos tu Orden de Entrada Digital de SAE con el Folio: ${successOrderFolio}. ¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
+                      window.open(`https://api.whatsapp.com/send?phone=52${successClientPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    className="w-full bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-4 rounded-xl shadow transition-all flex items-center justify-center gap-2 text-xs"
+                  >
+                    <Send size={14} />
+                    <span>Forzar Envío WhatsApp</span>
+                  </button>
                 </div>
               )}
+
+              {/* Email Notification Block */}
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3 text-left">
+                <div className="flex items-start gap-2.5">
+                  <div className="bg-blue-500 text-white p-1 rounded-lg shrink-0">
+                    <Mail size={16} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-black text-blue-800 uppercase tracking-wider">Enviar por Correo Electrónico</p>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Prepara un correo pre-redactado para el cliente: <strong className="font-bold text-blue-900">{successClient?.email || 'Sin correo registrado'}</strong>.
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    const emailSubject = `Orden de Entrada Digital SAE - Folio ${successOrderFolio}`;
+                    const emailBody = `Hola,\n\nTe compartimos los detalles de la Orden de Entrada Digital de tu vehículo en SAE con el Folio: ${successOrderFolio}.\n\nPuedes adjuntar el PDF o la Imagen que acabas de descargar de nuestra plataforma para que lo recibas formalmente.\n\n¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
+                    const clientMail = successClient?.email || '';
+                    window.open(`mailto:${clientMail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`, '_self');
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-blue-600/10 transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                  <Mail size={14} />
+                  <span>Redactar Correo</span>
+                </button>
+              </div>
             </div>
 
             {/* Footer */}

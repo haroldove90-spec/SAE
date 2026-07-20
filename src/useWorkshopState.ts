@@ -14,6 +14,15 @@ import {
 } from './mockData';
 import { supabase } from './lib/supabase';
 
+const sortNewestFirst = <T extends { id: string }>(arr: T[]): T[] => {
+  return [...arr].sort((a, b) => {
+    const numA = parseInt(a.id.replace(/\D/g, '')) || 0;
+    const numB = parseInt(b.id.replace(/\D/g, '')) || 0;
+    if (numA !== numB) return numB - numA;
+    return b.id.localeCompare(a.id);
+  });
+};
+
 export function useWorkshopState() {
   const [clients, setClients] = useState<Client[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -46,15 +55,15 @@ export function useWorkshopState() {
       const localTransactions = localStorage.getItem('wt_transactions');
       const localSettings = localStorage.getItem('wt_settings');
 
-      setClients(localClients ? JSON.parse(localClients) : INITIAL_CLIENTS);
-      setVehicles(localVehicles ? JSON.parse(localVehicles) : INITIAL_VEHICLES);
-      setEmployees(localEmployees ? JSON.parse(localEmployees) : INITIAL_EMPLOYEES);
-      setInventory(localInventory ? JSON.parse(localInventory) : INITIAL_INVENTORY);
-      setSuppliers(localSuppliers ? JSON.parse(localSuppliers) : INITIAL_SUPPLIERS);
-      setPurchaseOrders(localPurchaseOrders ? JSON.parse(localPurchaseOrders) : INITIAL_PURCHASE_ORDERS);
-      setRequisitions(localRequisitions ? JSON.parse(localRequisitions) : INITIAL_REQUISITIONS);
-      setOrders(localOrders ? JSON.parse(localOrders) : INITIAL_ORDERS);
-      setTransactions(localTransactions ? JSON.parse(localTransactions) : INITIAL_TRANSACTIONS);
+      setClients(localClients ? sortNewestFirst(JSON.parse(localClients)) : sortNewestFirst(INITIAL_CLIENTS));
+      setVehicles(localVehicles ? sortNewestFirst(JSON.parse(localVehicles)) : sortNewestFirst(INITIAL_VEHICLES));
+      setEmployees(localEmployees ? sortNewestFirst(JSON.parse(localEmployees)) : sortNewestFirst(INITIAL_EMPLOYEES));
+      setInventory(localInventory ? sortNewestFirst(JSON.parse(localInventory)) : sortNewestFirst(INITIAL_INVENTORY));
+      setSuppliers(localSuppliers ? sortNewestFirst(JSON.parse(localSuppliers)) : sortNewestFirst(INITIAL_SUPPLIERS));
+      setPurchaseOrders(localPurchaseOrders ? sortNewestFirst(JSON.parse(localPurchaseOrders)) : sortNewestFirst(INITIAL_PURCHASE_ORDERS));
+      setRequisitions(localRequisitions ? sortNewestFirst(JSON.parse(localRequisitions)) : sortNewestFirst(INITIAL_REQUISITIONS));
+      setOrders(localOrders ? sortNewestFirst(JSON.parse(localOrders)) : sortNewestFirst(INITIAL_ORDERS));
+      setTransactions(localTransactions ? sortNewestFirst(JSON.parse(localTransactions)) : sortNewestFirst(INITIAL_TRANSACTIONS));
       
       let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
       if (parsedSettings && parsedSettings.address && (parsedSettings.address.includes('Palmas') || parsedSettings.address.includes('palmas'))) {
@@ -129,16 +138,16 @@ export function useWorkshopState() {
         return merged;
       };
 
-      // Update local states by merging remote data with current local data
-      setClients(prev => mergeLocalAndRemote(prev, clientsData || []));
-      setVehicles(prev => mergeLocalAndRemote(prev, vehiclesData || []));
-      setEmployees(prev => mergeLocalAndRemote(prev, employeesData || []));
-      setInventory(prev => mergeLocalAndRemote(prev, inventoryData || []));
-      setSuppliers(prev => mergeLocalAndRemote(prev, suppliersData || []));
-      setPurchaseOrders(prev => mergeLocalAndRemote(prev, poData || []));
-      setRequisitions(prev => mergeLocalAndRemote(prev, requisitionsData || []));
-      setOrders(prev => mergeLocalAndRemote(prev, ordersData || []));
-      setTransactions(prev => mergeLocalAndRemote(prev, txData || []));
+      // Update local states by merging remote data with current local data and sorting newest-first
+      setClients(prev => sortNewestFirst(mergeLocalAndRemote(prev, clientsData || [])));
+      setVehicles(prev => sortNewestFirst(mergeLocalAndRemote(prev, vehiclesData || [])));
+      setEmployees(prev => sortNewestFirst(mergeLocalAndRemote(prev, employeesData || [])));
+      setInventory(prev => sortNewestFirst(mergeLocalAndRemote(prev, inventoryData || [])));
+      setSuppliers(prev => sortNewestFirst(mergeLocalAndRemote(prev, suppliersData || [])));
+      setPurchaseOrders(prev => sortNewestFirst(mergeLocalAndRemote(prev, poData || [])));
+      setRequisitions(prev => sortNewestFirst(mergeLocalAndRemote(prev, requisitionsData || [])));
+      setOrders(prev => sortNewestFirst(mergeLocalAndRemote(prev, ordersData || [])));
+      setTransactions(prev => sortNewestFirst(mergeLocalAndRemote(prev, txData || [])));
       
       if (settingsData) {
         setSettings(prev => ({ ...prev, ...settingsData }));
@@ -347,7 +356,7 @@ export function useWorkshopState() {
       ...employee,
       id: `emp-${Date.now()}`
     };
-    setEmployees(prev => [...prev, newEmployee]);
+    setEmployees(prev => [newEmployee, ...prev]);
   };
 
   const updateEmployee = (updatedEmployee: Employee) => {
@@ -360,7 +369,7 @@ export function useWorkshopState() {
       ...item,
       id: `part-${Date.now()}`
     };
-    setInventory(prev => [...prev, newItem]);
+    setInventory(prev => [newItem, ...prev]);
   };
 
   const updateInventoryItem = (updatedItem: InventoryItem) => {
@@ -589,7 +598,7 @@ export function useWorkshopState() {
       status: 'Pendiente',
       date: new Date().toISOString().split('T')[0]
     };
-    setRequisitions(prev => [...prev, newReq]);
+    setRequisitions(prev => [newReq, ...prev]);
   };
 
   const handleRequisitionStatus = (reqId: string, status: 'Despachado' | 'Rechazado') => {
@@ -724,7 +733,7 @@ export function useWorkshopState() {
       ...supplier,
       id: `sup-${Date.now()}`
     };
-    setSuppliers(prev => [...prev, newSupplier]);
+    setSuppliers(prev => [newSupplier, ...prev]);
   };
 
   // Reset database to initial values
