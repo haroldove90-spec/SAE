@@ -12,6 +12,11 @@ export interface Client {
   address: string;
   creditLimit: number;
   creditBalance: number;
+  calle?: string;
+  cp?: string;
+  colonia?: string;
+  alcaldia?: string;
+  telFijo?: string;
 }
 
 export interface Vehicle {
@@ -26,6 +31,8 @@ export interface Vehicle {
   color: string;
   engomadoColor: 'yellow' | 'pink' | 'red' | 'green' | 'blue'; // CDMX verification
   plateEnding: string; // CDMX verification
+  motor?: string;
+  serie?: string;
 }
 
 export type EmployeeRole = 'Cajero' | 'Asesor' | 'Mecanico';
@@ -92,6 +99,24 @@ export interface Checklist {
   jack: boolean;
   extinguisher: boolean;
   photos: string[]; // Mock data URI or text
+  
+  // Custom SAE fields matching paper form checklist
+  tapetes?: boolean;
+  encendedor?: boolean;
+  estereo?: boolean;
+  tarjetaCirculacion?: boolean;
+  compVerificacion?: boolean;
+  polizaSeguro?: boolean;
+  segurosRuedas?: boolean;
+  gato?: boolean;
+  herramienta?: boolean;
+  extintor?: boolean;
+  llantaRefaccion?: boolean;
+  sensoresPresencia?: boolean;
+  camaraReversa?: boolean;
+  
+  inspeccionMotor?: string;
+  objetosValor?: string;
 }
 
 export interface BudgetLineItem {
@@ -135,6 +160,12 @@ export interface ServiceOrder {
     date: string;
     method: 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Credito';
   }[];
+  
+  // Custom SAE fields
+  folio?: string;
+  fecha?: string;
+  hora?: string;
+  tecnico?: string;
 }
 
 export type TransactionType = 'Ingreso' | 'Egreso';

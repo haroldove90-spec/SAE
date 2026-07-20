@@ -39,6 +39,7 @@ export default function App() {
     addClient,
     updateClient,
     addVehicle,
+    updateVehicle,
     addEmployee,
     updateEmployee,
     addInventoryItem,
@@ -425,7 +426,9 @@ export default function App() {
                     inventory={inventory}
                     orders={orders}
                     addClient={addClient}
+                    updateClient={updateClient}
                     addVehicle={addVehicle}
+                    updateVehicle={updateVehicle}
                     createServiceOrder={createServiceOrder}
                     addOrderItem={addOrderItem}
                     deleteOrderItem={deleteOrderItem}
@@ -575,18 +578,8 @@ export default function App() {
       {!showLanding && (
         <div className="fixed bottom-0 left-0 right-0 bg-[#010101]/95 backdrop-blur-md border-t-2 border-[#8D6A28]/50 py-1.5 px-2 sm:px-4 shadow-2xl z-40 block">
           <div className="max-w-7xl mx-auto">
-            <div className={`grid ${currentRole === 'admin' || currentRole === 'advisor' ? 'grid-cols-5' : 'grid-cols-4'} gap-1 w-full text-center`}>
+            <div className={`grid ${getRoleTabs().length === 4 ? 'grid-cols-4' : 'grid-cols-3'} gap-1 w-full text-center`}>
               
-              {/* Home/Roles Button */}
-              <button
-                onClick={() => setShowLanding(true)}
-                className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all text-slate-300 hover:text-white hover:bg-white/5 cursor-pointer"
-                title="Cerrar Sesión y Cambiar de Rol"
-              >
-                <Home className="w-5 h-5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
-                <span className="text-[9px] sm:text-xs font-bold">Inicio / Rol</span>
-              </button>
-
               {/* Module Buttons for current role */}
               {getRoleTabs().map((item) => {
                 const IconComponent = item.icon;
@@ -595,14 +588,14 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => setActiveTabValue(item.id)}
-                    className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-1 px-1.5 rounded-xl transition-all cursor-pointer ${
+                    className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 px-1.5 rounded-xl transition-all cursor-pointer ${
                       isActive 
                         ? 'bg-[#8D6A28] text-white border border-white/10 shadow-lg shadow-[#8D6A28]/10' 
                         : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <IconComponent className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="text-[9px] sm:text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
+                    <IconComponent className="w-5 h-5 sm:w-4 sm:h-4 shrink-0 text-amber-500" />
+                    <span className="text-[10px] sm:text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
                   </button>
                 );
               })}

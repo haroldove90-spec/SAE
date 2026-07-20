@@ -135,6 +135,10 @@ export function useWorkshopState() {
     return newVehicle;
   };
 
+  const updateVehicle = (updatedVehicle: Vehicle) => {
+    setVehicles(prev => prev.map(v => v.id === updatedVehicle.id ? updatedVehicle : v));
+  };
+
   // 3. Employees & Commissions
   const addEmployee = (employee: Omit<Employee, 'id'>) => {
     const newEmployee: Employee = {
@@ -563,6 +567,7 @@ export function useWorkshopState() {
     addClient,
     updateClient,
     addVehicle,
+    updateVehicle,
     addEmployee,
     updateEmployee,
     addInventoryItem,

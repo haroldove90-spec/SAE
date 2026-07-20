@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
   Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck,
-  Camera, Upload, Trash2, AlertTriangle
+  Camera, Upload, Trash2, AlertTriangle, Download, Sparkle
 } from 'lucide-react';
 import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
+import { generateSaePdf } from '../utils/saePdf';
 
 interface AdvisorDashboardProps {
   clients: Client[];
@@ -13,8 +14,10 @@ interface AdvisorDashboardProps {
   inventory: InventoryItem[];
   orders: ServiceOrder[];
   addClient: (c: Omit<Client, 'id' | 'creditBalance'>) => Client;
+  updateClient: (c: Client) => void;
   addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle;
-  createServiceOrder: (o: Omit<ServiceOrder, 'id' | 'items' | 'timeLogs' | 'isClockedIn' | 'isPaused' | 'totalHoursWorked' | 'payments'>) => ServiceOrder;
+  updateVehicle: (v: Vehicle) => void;
+  createServiceOrder: (o: Omit<ServiceOrder, 'id' | 'items' | 'timeLogs' | 'isClockedIn' | 'isPaused' | 'totalHoursWorked' | 'payments' | 'folio' | 'fecha' | 'hora' | 'tecnico'> & { folio?: string; fecha?: string; hora?: string; tecnico?: string }) => ServiceOrder;
   addOrderItem: (orderId: string, item: Omit<BudgetLineItem, 'id' | 'approved'>) => void;
   deleteOrderItem: (orderId: string, itemId: string) => void;
   approveBudgetLine: (orderId: string, itemId: string, approved: boolean) => void;
@@ -31,7 +34,9 @@ export default function AdvisorDashboard({
   inventory,
   orders,
   addClient,
+  updateClient,
   addVehicle,
+  updateVehicle,
   createServiceOrder,
   addOrderItem,
   deleteOrderItem,
@@ -83,8 +88,106 @@ export default function AdvisorDashboard({
     spareTire: true,
     jack: true,
     extinguisher: false,
-    photos: []
+    photos: [],
+    tapetes: true,
+    encendedor: true,
+    estereo: true,
+    tarjetaCirculacion: true,
+    compVerificacion: false,
+    polizaSeguro: false,
+    segurosRuedas: false,
+    gato: true,
+    herramienta: true,
+    extintor: false,
+    llantaRefaccion: true,
+    sensoresPresencia: false,
+    camaraReversa: false,
+    inspeccionMotor: 'Inspección visual conforme a protocolo',
+    objetosValor: 'Ninguno'
   });
+
+  // Selected Client fields to edit for the order
+  const [orderClientCalle, setOrderClientCalle] = useState('');
+  const [orderClientCp, setOrderClientCp] = useState('');
+  const [orderClientColonia, setOrderClientColonia] = useState('');
+  const [orderClientAlcaldia, setOrderClientAlcaldia] = useState('');
+  const [orderClientTelFijo, setOrderClientTelFijo] = useState('');
+  const [orderClientEmail, setOrderClientEmail] = useState('');
+  const [orderClientPhone, setOrderClientPhone] = useState('');
+
+  // Selected Vehicle fields to edit for the order
+  const [orderVehMotor, setOrderVehMotor] = useState('');
+  const [orderVehSerie, setOrderVehSerie] = useState('');
+  const [orderVehColor, setOrderVehColor] = useState('');
+  const [orderVehMileage, setOrderVehMileage] = useState(0);
+  const [orderVehBrand, setOrderVehBrand] = useState('');
+  const [orderVehModel, setOrderVehModel] = useState('');
+  const [orderVehYear, setOrderVehYear] = useState(2020);
+  const [orderVehPlate, setOrderVehPlate] = useState('');
+
+  // Custom SAE Order states
+  const [orderFolio, setOrderFolio] = useState('');
+  const [orderFecha, setOrderFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [orderHora, setOrderHora] = useState(new Date().toTimeString().split(' ')[0].substring(0, 5));
+  const [orderTecnicoId, setOrderTecnicoId] = useState('');
+
+  // Synchronize edit states when selected client changes
+  useEffect(() => {
+    if (selectedClientId) {
+      const c = clients.find(cli => cli.id === selectedClientId);
+      if (c) {
+        setOrderClientCalle(c.calle || c.address || '');
+        setOrderClientCp(c.cp || '');
+        setOrderClientColonia(c.colonia || '');
+        setOrderClientAlcaldia(c.alcaldia || '');
+        setOrderClientTelFijo(c.telFijo || '');
+        setOrderClientEmail(c.email || '');
+        setOrderClientPhone(c.phone || '');
+      }
+    } else {
+      setOrderClientCalle('');
+      setOrderClientCp('');
+      setOrderClientColonia('');
+      setOrderClientAlcaldia('');
+      setOrderClientTelFijo('');
+      setOrderClientEmail('');
+      setOrderClientPhone('');
+    }
+  }, [selectedClientId, clients]);
+
+  // Synchronize edit states when selected vehicle changes
+  useEffect(() => {
+    if (selectedVehicleId) {
+      const v = vehicles.find(veh => veh.id === selectedVehicleId);
+      if (v) {
+        setOrderVehMotor(v.motor || '');
+        setOrderVehSerie(v.serie || v.vin || '');
+        setOrderVehColor(v.color || '');
+        setOrderVehMileage(v.mileage || 0);
+        setOrderVehBrand(v.brand || '');
+        setOrderVehModel(v.model || '');
+        setOrderVehYear(v.year || 2020);
+        setOrderVehPlate(v.plate || '');
+      }
+    } else {
+      setOrderVehMotor('');
+      setOrderVehSerie('');
+      setOrderVehColor('');
+      setOrderVehMileage(0);
+      setOrderVehBrand('');
+      setOrderVehModel('');
+      setOrderVehYear(2020);
+      setOrderVehPlate('');
+    }
+  }, [selectedVehicleId, vehicles]);
+
+  // Set default mechanic ID
+  useEffect(() => {
+    const defaultMech = employees.find(e => e.role === 'Mecanico' && e.active);
+    if (defaultMech) {
+      setOrderTecnicoId(defaultMech.id);
+    }
+  }, [employees]);
 
   // Live camera and device photo capture states & handlers
   const [showCameraModal, setShowCameraModal] = useState(false);
@@ -200,8 +303,42 @@ export default function AdvisorDashboard({
       return;
     }
 
+    // 1. Persist the edited client fields back to state
+    const currentClient = clients.find(c => c.id === selectedClientId);
+    if (currentClient) {
+      updateClient({
+        ...currentClient,
+        calle: orderClientCalle,
+        cp: orderClientCp,
+        colonia: orderClientColonia,
+        alcaldia: orderClientAlcaldia,
+        telFijo: orderClientTelFijo,
+        email: orderClientEmail,
+        phone: orderClientPhone,
+        address: `${orderClientCalle}, Col. ${orderClientColonia}, ${orderClientAlcaldia}, C.P. ${orderClientCp}`
+      });
+    }
+
+    // 2. Persist the edited vehicle fields back to state
+    const currentVehicle = vehicles.find(v => v.id === selectedVehicleId);
+    if (currentVehicle) {
+      updateVehicle({
+        ...currentVehicle,
+        motor: orderVehMotor,
+        serie: orderVehSerie,
+        color: orderVehColor,
+        mileage: orderVehMileage,
+        brand: orderVehBrand,
+        model: orderVehModel,
+        year: orderVehYear,
+        plate: orderVehPlate
+      });
+    }
+
     const assignedAdvisor = employees.find(e => e.role === 'Asesor' && e.active);
-    const assignedMechanic = employees.find(e => e.role === 'Mecanico' && e.active);
+    const assignedMechanic = employees.find(e => e.id === orderTecnicoId) || employees.find(e => e.role === 'Mecanico' && e.active);
+
+    const finalFolio = orderFolio || `${380 + orders.length + 1}A`;
 
     const created = createServiceOrder({
       clientId: selectedClientId,
@@ -213,15 +350,50 @@ export default function AdvisorDashboard({
       diagnostics: '',
       diagnosticPhotos: [],
       status: 'Diagnostico',
-      dateOpened: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      dateOpened: `${orderFecha} ${orderHora}:00`,
+      folio: finalFolio,
+      fecha: orderFecha,
+      hora: orderHora,
+      tecnico: assignedMechanic?.name || 'Técnico de Guardia'
     });
 
-    alert(`¡Orden de Servicio ${created.id} creada exitosamente!\nSu estatus inicial es 'En Diagnóstico'.`);
+    alert(`¡Orden de Servicio Folio ${finalFolio} (${created.id}) creada exitosamente!\nSu estatus inicial es 'En Diagnóstico'.`);
     setSelectedOrderId(created.id);
+    
+    // Automatically generate the entry sheet PDF to save staff time!
+    setTimeout(() => {
+      if (confirm('¿Desea descargar e imprimir la Orden de Entrada en formato PDF oficial de SAE?')) {
+        const freshClient = {
+          ...currentClient!,
+          calle: orderClientCalle,
+          cp: orderClientCp,
+          colonia: orderClientColonia,
+          alcaldia: orderClientAlcaldia,
+          telFijo: orderClientTelFijo,
+          email: orderClientEmail,
+          phone: orderClientPhone,
+          address: `${orderClientCalle}, Col. ${orderClientColonia}, ${orderClientAlcaldia}, C.P. ${orderClientCp}`
+        };
+        const freshVehicle = {
+          ...currentVehicle!,
+          motor: orderVehMotor,
+          serie: orderVehSerie,
+          color: orderVehColor,
+          mileage: orderVehMileage,
+          brand: orderVehBrand,
+          model: orderVehModel,
+          year: orderVehYear,
+          plate: orderVehPlate
+        };
+        generateSaePdf(created, freshClient, freshVehicle, employees);
+      }
+    }, 300);
+
     setActiveTab('quotes'); // redirect to quotes to add budget lines
 
     // Reset fields
     setReportedFailure('');
+    setOrderFolio('');
     setChecklist({
       scratches: false,
       dents: false,
@@ -230,7 +402,22 @@ export default function AdvisorDashboard({
       spareTire: true,
       jack: true,
       extinguisher: false,
-      photos: []
+      photos: [],
+      tapetes: true,
+      encendedor: true,
+      estereo: true,
+      tarjetaCirculacion: true,
+      compVerificacion: false,
+      polizaSeguro: false,
+      segurosRuedas: false,
+      gato: true,
+      herramienta: true,
+      extintor: false,
+      llantaRefaccion: true,
+      sensoresPresencia: false,
+      camaraReversa: false,
+      inspeccionMotor: 'Inspección visual conforme a protocolo',
+      objetosValor: 'Ninguno'
     });
   };
 
@@ -415,501 +602,660 @@ export default function AdvisorDashboard({
 
       {/* RECEPTION & CHECK-IN TAB */}
       {activeTab === 'reception' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* STEP 1: Select Client & Vehicle */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5 font-display">
-              <UserCheck size={18} className="text-amber-600" />
-              1. Cliente y Vehículo
-            </h4>
-
-            {/* Search Client */}
-            <div className="space-y-2 text-xs">
-              <label className="block text-slate-500 font-medium">Buscar Cliente</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  placeholder="Buscar por nombre o celular..."
-                  className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg focus:outline-amber-500"
-                />
-                <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
-              </div>
-            </div>
-
-            {/* Client List */}
-            <div className="border border-slate-100 rounded-lg max-h-[140px] overflow-y-auto text-xs divide-y divide-slate-50">
-              {filteredClients.map(c => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedClientId(c.id);
-                    setSelectedVehicleId('');
-                  }}
-                  className={`w-full text-left p-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between ${
-                    selectedClientId === c.id ? 'bg-amber-50/50 border-l-4 border-amber-500' : ''
-                  }`}
-                >
-                  <div>
-                    <p className="font-bold text-slate-800">{c.name}</p>
-                    <p className="text-[10px] text-slate-500">{c.phone} • {c.email}</p>
-                  </div>
-                  <ChevronRight size={14} className="text-slate-400" />
-                </button>
-              ))}
-            </div>
-
-            {/* Quick add client button */}
-            <button
-              type="button"
-              onClick={() => setShowAddClient(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-dashed border-amber-200"
-            >
-              <UserPlus size={14} />
-              Dar de Alta Nuevo Cliente
-            </button>
-
-            {/* Vehicle Selection */}
-            {selectedClientId && (
-              <div className="space-y-3 pt-2">
-                <label className="block text-slate-500 font-medium text-xs">Vehículos del Cliente</label>
-                {clientVehicles.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">Este cliente no tiene autos vinculados.</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2">
-                    {clientVehicles.map(v => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setSelectedVehicleId(v.id)}
-                        className={`text-left p-2.5 border rounded-lg text-xs hover:bg-slate-50 transition-all ${
-                          selectedVehicleId === v.id 
-                            ? 'border-amber-500 bg-amber-50/50 shadow-sm' 
-                            : 'border-slate-200'
-                        }`}
-                      >
-                        <p className="font-bold text-slate-800">{v.brand} {v.model} ({v.year})</p>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">Placas: {v.plate} • Kilómetros: {v.mileage.toLocaleString()}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddVehicle(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-dashed border-indigo-200"
-                >
-                  <Plus size={14} />
-                  Asociar Nuevo Automóvil
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* STEP 2: Checklist & walkaround */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <h4 className="font-bold text-slate-800 flex items-center gap-2 font-display text-sm md:text-base">
-                <CheckSquare size={20} className="text-amber-600" />
-                2. Checklist e Inventario de Entrada
-              </h4>
-              <span className="text-[10px] bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
-                <Sparkles size={11} /> Auditoría Completa
-              </span>
-            </div>
-
-            {/* Interactive Car Damage Blueprint Map */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Mapa de Daños de Carrocería</span>
-                <span className="text-[10px] text-slate-400 italic">Haz clic en los botones para registrar daños</span>
-              </div>
+        <div className="space-y-6">
+          {/* TOP BAR: SELECT CLIENT & VEHICLE SEARCH */}
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                {/* Visual Front/Rear/Side Toggles */}
-                <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col justify-center space-y-3">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase">Inspección de Daños</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
+              {/* SELECT CLIENT */}
+              <div className="space-y-3">
+                <h5 className="font-bold text-amber-500 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <UserCheck size={14} />
+                  1. Buscar o Crear Cliente
+                </h5>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    placeholder="Buscar cliente por nombre o teléfono..."
+                    className="w-full bg-slate-950 border border-slate-800 text-white placeholder-slate-500 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <Search size={14} className="absolute left-3 top-3 text-slate-500" />
+                </div>
+
+                {/* Clients scrollable list */}
+                <div className="border border-slate-800 bg-slate-950 rounded-xl max-h-[120px] overflow-y-auto text-xs divide-y divide-slate-900">
+                  {filteredClients.map(c => (
+                    <button
+                      key={c.id}
                       type="button"
-                      onClick={() => setChecklist(prev => ({ ...prev, scratches: !prev.scratches }))}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
-                        checklist.scratches 
-                          ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
-                          : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
+                      onClick={() => {
+                        setSelectedClientId(c.id);
+                        setSelectedVehicleId('');
+                      }}
+                      className={`w-full text-left p-2.5 hover:bg-slate-900/50 transition-colors flex items-center justify-between ${
+                        selectedClientId === c.id ? 'bg-amber-950/20 text-white' : 'text-slate-400'
                       }`}
                     >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
-                        checklist.scratches ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
-                      }`}>
-                        <Sparkles size={14} />
+                      <div>
+                        <p className="font-bold">{c.name}</p>
+                        <p className="text-[10px] text-slate-500">{c.phone} • {c.email}</p>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold leading-tight truncate">Rayones</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{checklist.scratches ? 'Reportado' : 'Ninguno'}</p>
-                      </div>
+                      <ChevronRight size={14} className="text-slate-600" />
                     </button>
-
-                    <button 
-                      type="button"
-                      onClick={() => setChecklist(prev => ({ ...prev, dents: !prev.dents }))}
-                      className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
-                        checklist.dents 
-                          ? 'bg-rose-50 border-rose-200 text-rose-700 shadow-sm' 
-                          : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
-                      }`}
-                    >
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
-                        checklist.dents ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'
-                      }`}>
-                        <AlertTriangle size={14} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold leading-tight truncate">Golpes</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5 truncate">{checklist.dents ? 'Reportado' : 'Ninguno'}</p>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 bg-white p-2.5 rounded-lg border border-slate-100">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                    <span>Los daños se registrarán de forma permanente en el expediente técnico.</span>
-                  </div>
-                </div>
-
-                {/* Car Silhouette Diagram representation */}
-                <div className="border border-slate-100 rounded-xl p-4 bg-slate-900 flex flex-col items-center justify-center relative min-h-[140px] overflow-hidden">
-                  {/* Subtle technical background grid */}
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
-                  
-                  {/* Top-down abstract blueprint car skeleton */}
-                  <div className="w-44 h-16 relative flex items-center justify-center select-none pointer-events-none">
-                    {/* Abstract outline */}
-                    <div className="absolute w-40 h-14 border-2 border-slate-600 rounded-xl flex justify-between items-center px-1">
-                      {/* wheels */}
-                      <div className="absolute -top-1 left-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
-                      <div className="absolute -top-1 right-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
-                      <div className="absolute -bottom-1 left-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
-                      <div className="absolute -bottom-1 right-5 w-6 h-2 bg-slate-700 rounded-sm"></div>
-                      
-                      {/* cabin windshield */}
-                      <div className="absolute left-10 right-10 top-2 bottom-2 border border-slate-700/60 rounded flex items-center justify-center bg-slate-800/20">
-                        <span className="text-[7px] text-slate-600 font-mono">CABIN</span>
-                      </div>
-                    </div>
-                    {/* front grid */}
-                    <div className="absolute left-0 w-2 h-8 border border-slate-600 bg-slate-800 rounded-l flex items-center justify-center"></div>
-                    {/* rear trunk */}
-                    <div className="absolute right-0 w-2 h-8 border border-slate-600 bg-slate-800 rounded-r"></div>
-                    
-                    {/* Status lights on top of blueprint if damage active */}
-                    {checklist.scratches && (
-                      <div className="absolute left-4 top-2 w-3.5 h-3.5 rounded-full bg-rose-500/30 animate-ping flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                      </div>
-                    )}
-                    {checklist.dents && (
-                      <div className="absolute right-8 bottom-2 w-3.5 h-3.5 rounded-full bg-rose-500/30 animate-ping flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[9px] text-slate-400 font-mono mt-3 uppercase tracking-wider">Esquema Técnico de Carrocería</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Premium Interactive Gas Tank Needle Gauge */}
-            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Nivel de Combustible</span>
-                  <span className="text-[11px] text-slate-400">Verifica el nivel del tanque actual</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200/50 px-2.5 py-0.5 rounded-full">
-                  <div className={`w-2 h-2 rounded-full ${checklist.fuelLevel <= 25 ? 'bg-red-500' : checklist.fuelLevel <= 50 ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
-                  <span className="font-bold text-slate-800 text-xs font-mono">{checklist.fuelLevel}% Tanque</span>
-                </div>
-              </div>
-
-              {/* Graphical Needle SVG Gauge */}
-              <div className="flex flex-col items-center justify-center py-1">
-                <svg className="w-44 h-22 overflow-visible" viewBox="0 0 100 50">
-                  <defs>
-                    <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#ef4444" />
-                      <stop offset="25%" stopColor="#f97316" />
-                      <stop offset="50%" stopColor="#eab308" />
-                      <stop offset="100%" stopColor="#10b981" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Outer curved arc */}
-                  <path 
-                    d="M 15,45 A 35,35 0 0,1 85,45" 
-                    fill="none" 
-                    stroke="#e2e8f0" 
-                    strokeWidth="8" 
-                    strokeLinecap="round" 
-                  />
-                  
-                  {/* Colored indicator arc overlay */}
-                  <path 
-                    d="M 15,45 A 35,35 0 0,1 85,45" 
-                    fill="none" 
-                    stroke="url(#gauge-grad)" 
-                    strokeWidth="7" 
-                    strokeLinecap="round" 
-                    strokeDasharray={`${(checklist.fuelLevel / 100) * 110} 110`}
-                    className="transition-all duration-500 ease-out"
-                  />
-                  
-                  {/* Gauge ticks */}
-                  <text x="11" y="49" className="text-[4px] font-bold font-mono fill-slate-400">E</text>
-                  <text x="21" y="27" className="text-[4px] font-bold font-mono fill-slate-400">1/4</text>
-                  <text x="47" y="14" className="text-[4px] font-bold font-mono fill-slate-400">1/2</text>
-                  <text x="74" y="27" className="text-[4px] font-bold font-mono fill-slate-400">3/4</text>
-                  <text x="86" y="49" className="text-[4px] font-bold font-mono fill-slate-400">F</text>
-                  
-                  {/* Pivot center */}
-                  <circle cx="50" cy="45" r="3" fill="#334155" />
-                  <circle cx="50" cy="45" r="1" fill="#ffffff" />
-                  
-                  {/* Needle */}
-                  <line 
-                    x1="50" 
-                    y1="45" 
-                    x2={50 + 28 * Math.cos((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)}
-                    y2={45 + 28 * Math.sin((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)}
-                    stroke="#1e293b" 
-                    strokeWidth="1.5" 
-                    strokeLinecap="round"
-                    className="transition-all duration-500 ease-out origin-[50px_45px]"
-                  />
-                </svg>
-
-                {/* Slider selector dots */}
-                <div className="w-full max-w-sm mt-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="25"
-                    value={checklist.fuelLevel}
-                    onChange={(e) => setChecklist(prev => ({ ...prev, fuelLevel: parseInt(e.target.value) }))}
-                    className="w-full accent-amber-600 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex justify-between items-center text-[9px] font-bold mt-2 px-1 gap-1">
-                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 0 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 0 ? 'bg-red-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Vacío (0%)</button>
-                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 25 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 25 ? 'bg-orange-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>1/4 (25%)</button>
-                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 50 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 50 ? 'bg-amber-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Medio (50%)</button>
-                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 75 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 75 ? 'bg-lime-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>3/4 (75%)</button>
-                    <button type="button" onClick={() => setChecklist(prev => ({ ...prev, fuelLevel: 100 }))} className={`px-2 py-0.5 rounded transition-colors ${checklist.fuelLevel === 100 ? 'bg-emerald-500 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}>Lleno (100%)</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Accessories Checklist - Styled Cards */}
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wide block">Herramientas y Accesorios a bordo</span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, tools: !prev.tools }))}
-                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
-                    checklist.tools 
-                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
-                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <span className="truncate">Herramienta básica</span>
-                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
-                    checklist.tools ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
-                  }`}>
-                    <Check size={10} strokeWidth={3} />
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, spareTire: !prev.spareTire }))}
-                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
-                    checklist.spareTire 
-                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
-                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <span className="truncate">Llanta refacción</span>
-                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
-                    checklist.spareTire ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
-                  }`}>
-                    <Check size={10} strokeWidth={3} />
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, jack: !prev.jack }))}
-                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
-                    checklist.jack 
-                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
-                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <span className="truncate">Gato hidráulico</span>
-                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
-                    checklist.jack ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
-                  }`}>
-                    <Check size={10} strokeWidth={3} />
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setChecklist(prev => ({ ...prev, extinguisher: !prev.extinguisher }))}
-                  className={`flex items-center justify-between p-2.5 border rounded-xl font-bold transition-all ${
-                    checklist.extinguisher 
-                      ? 'bg-amber-50/50 border-amber-300 text-slate-850' 
-                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <span className="truncate">Extintor</span>
-                  <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
-                    checklist.extinguisher ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 text-transparent'
-                  }`}>
-                    <Check size={10} strokeWidth={3} />
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Photographic Evidence Uplink Block */}
-            <div className="space-y-4 pt-3 border-t border-slate-100">
-              <div className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1">
-                    <Camera size={14} className="text-slate-500" />
-                    Fotografías de Evidencia
-                  </span>
-                  <span className="text-[11px] text-slate-400">Captura o sube el estado del auto</span>
-                </div>
-                {checklist.photos.length > 0 && (
-                  <span className="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full text-[10px] font-mono">
-                    {checklist.photos.length} {checklist.photos.length === 1 ? 'Foto' : 'Fotos'}
-                  </span>
-                )}
-              </div>
-
-              {/* Upload & Camera Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Camera Trigger for Browser */}
-                <button
-                  type="button"
-                  onClick={startCamera}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-md group active:scale-95"
-                >
-                  <Camera size={14} className="text-amber-500 group-hover:scale-110 transition-transform" />
-                  <span>Cámara en Vivo</span>
-                </button>
-
-                {/* Upload / Native Camera Capture Trigger for Mobile Device */}
-                <label
-                  htmlFor="camera-capture-input"
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-md group active:scale-95 text-center"
-                >
-                  <Upload size={14} className="group-hover:translate-y-[-1px] transition-transform" />
-                  <span>Cámara Móvil / Subir</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="camera-capture-input"
-                  />
-                </label>
-              </div>
-
-              {/* Photo Evidence Gallery */}
-              {checklist.photos.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 max-h-[140px] overflow-y-auto">
-                  {checklist.photos.map((photo, index) => (
-                    <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-slate-250 group bg-slate-950">
-                      <img 
-                        src={photo} 
-                        alt={`Evidencia ${index + 1}`} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        referrerPolicy="no-referrer"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-700 text-white p-1 rounded-full transition-all opacity-0 group-hover:opacity-100 shadow-md"
-                        title="Eliminar foto"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                      <span className="absolute bottom-1 left-1 bg-black/60 text-white px-1 py-0.5 rounded text-[8px] font-mono leading-none">
-                        #{index + 1}
-                      </span>
-                    </div>
                   ))}
                 </div>
-              ) : (
-                <div className="border border-dashed border-slate-200 rounded-xl p-4 text-center flex flex-col items-center justify-center bg-slate-50/50">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
-                    <Camera size={16} />
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddClient(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-all border border-dashed border-amber-500/20"
+                >
+                  <UserPlus size={13} />
+                  Registrar Nuevo Cliente
+                </button>
+              </div>
+
+              {/* SELECT VEHICLE */}
+              <div className="space-y-3">
+                <h5 className="font-bold text-amber-500 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Car size={14} />
+                  2. Vehículo del Cliente
+                </h5>
+                {selectedClientId ? (
+                  <div className="space-y-3">
+                    {clientVehicles.length === 0 ? (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center">
+                        <p className="text-xs text-slate-500 italic">El cliente seleccionado no tiene autos vinculados.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[120px] overflow-y-auto">
+                        {clientVehicles.map(v => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setSelectedVehicleId(v.id)}
+                            className={`text-left p-2.5 border rounded-xl text-xs hover:bg-slate-900/50 transition-all ${
+                              selectedVehicleId === v.id 
+                                ? 'border-amber-500 bg-amber-500/10 text-white' 
+                                : 'border-slate-800 bg-slate-950 text-slate-400'
+                            }`}
+                          >
+                            <p className="font-bold">{v.brand} {v.model} ({v.year})</p>
+                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">Placa: {v.plate} • Kilómetros: {v.mileage.toLocaleString()}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowAddVehicle(true)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-all border border-dashed border-amber-500/20"
+                    >
+                      <Plus size={13} />
+                      Asociar Nuevo Vehículo
+                    </button>
                   </div>
-                  <p className="text-xs font-bold text-slate-700">Sin Evidencia Fotográfica</p>
-                  <p className="text-[10px] text-slate-400 max-w-[200px] mt-0.5 mx-auto">Toma fotos en vivo o súbelas como auditoría física.</p>
-                </div>
-              )}
+                ) : (
+                  <div className="p-6 rounded-xl bg-slate-950/50 border border-slate-800 text-center flex flex-col items-center justify-center">
+                    <Car className="text-slate-700 w-8 h-8 mb-2" />
+                    <p className="text-xs text-slate-500">Selecciona primero un cliente para ver o agregar vehículos.</p>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
 
-          {/* STEP 3: Motivo de visita & Open Order */}
-          <form onSubmit={handleCreateOrder} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div className="space-y-4">
-              <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 flex items-center gap-1.5 font-display">
-                <FileText size={18} className="text-amber-600" />
-                3. Motivo e Inicio del Servicio
-              </h4>
-
-              <div>
-                <label className="block text-slate-500 font-medium text-xs mb-1">Falla Reportada / Síntomas</label>
-                <textarea
-                  required
-                  value={reportedFailure}
-                  onChange={(e) => setReportedFailure(e.target.value)}
-                  placeholder="Ej. El pedal de freno vibra en pendientes pronunciadas. Tironea por las mañanas..."
-                  className="w-full p-2.5 border border-slate-200 rounded-lg text-xs h-32 focus:outline-amber-500"
-                />
+          {/* ACTIVE FORM OR PLACEHOLDER */}
+          {selectedClientId && selectedVehicleId ? (
+            <div className="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
+              
+              {/* Header Bar representing Physical Sheet */}
+              <div className="bg-slate-100 border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 font-display">ORDEN DE RECEPCIÓN DIGITAL - SAE</h3>
+                  <p className="text-xs text-slate-500">Captura la información oficial para el Formato Especializado SAE</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase">FOLIO ORDEN</label>
+                    <input
+                      type="text"
+                      placeholder="Autogenerado"
+                      value={orderFolio}
+                      onChange={(e) => setOrderFolio(e.target.value)}
+                      className="bg-white border border-slate-300 rounded px-2.5 py-1 text-xs font-bold text-slate-800 text-center w-28 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded px-3 py-2 text-center shrink-0">
+                    <p className="text-[9px] font-bold tracking-wider uppercase leading-none">FORMATO</p>
+                    <p className="text-sm font-black mt-0.5">SAE-2026</p>
+                  </div>
+                </div>
               </div>
 
-              {selectedClientId && selectedVehicleId && (
-                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-800 space-y-1">
-                  <p><strong>Cliente:</strong> {clients.find(c => c.id === selectedClientId)?.name}</p>
-                  <p><strong>Vehículo:</strong> {vehicles.find(v => v.id === selectedVehicleId)?.brand} {vehicles.find(v => v.id === selectedVehicleId)?.model}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">* Se asignará el asesor de guardia y el primer mecánico disponible.</p>
+              <form onSubmit={handleCreateOrder} className="p-6 space-y-6">
+                
+                {/* METADATA BLOCK: FECHA, HORA, TECNICO */}
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Fecha de Ingreso</label>
+                    <input
+                      type="date"
+                      value={orderFecha}
+                      onChange={(e) => setOrderFecha(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Hora de Ingreso</label>
+                    <input
+                      type="time"
+                      value={orderHora}
+                      onChange={(e) => setOrderHora(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Mecánico Asignado</label>
+                    <select
+                      value={orderTecnicoId}
+                      onChange={(e) => setOrderTecnicoId(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value="">Seleccione Técnico...</option>
+                      {employees.filter(emp => emp.role === 'Mecanico').map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              )}
+
+                {/* 1. SECCIÓN CLIENTE */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                    I. Información del Cliente / Propietario
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div className="md:col-span-3">
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Nombre Completo</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={clients.find(c => c.id === selectedClientId)?.name || ''}
+                        className="w-full bg-slate-100 border border-slate-200 rounded-lg p-2.5 font-bold text-slate-700 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Calle y Número</label>
+                      <input
+                        type="text"
+                        value={orderClientCalle}
+                        onChange={(e) => setOrderClientCalle(e.target.value)}
+                        placeholder="Ej. Av. Patriotismo 120"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Colonia</label>
+                      <input
+                        type="text"
+                        value={orderClientColonia}
+                        onChange={(e) => setOrderClientColonia(e.target.value)}
+                        placeholder="Ej. San Juan"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Alcaldía o Delegación</label>
+                      <input
+                        type="text"
+                        value={orderClientAlcaldia}
+                        onChange={(e) => setOrderClientAlcaldia(e.target.value)}
+                        placeholder="Ej. Benito Juárez"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Código Postal (C.P.)</label>
+                      <input
+                        type="text"
+                        value={orderClientCp}
+                        onChange={(e) => setOrderClientCp(e.target.value)}
+                        placeholder="Ej. 03710"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Teléfono Fijo / Casa</label>
+                      <input
+                        type="text"
+                        value={orderClientTelFijo}
+                        onChange={(e) => setOrderClientTelFijo(e.target.value)}
+                        placeholder="Ej. 55-1234-5678"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Celular / WhatsApp</label>
+                      <input
+                        type="text"
+                        value={orderClientPhone}
+                        onChange={(e) => setOrderClientPhone(e.target.value)}
+                        placeholder="Ej. 55-9876-5432"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Correo Electrónico</label>
+                      <input
+                        type="email"
+                        value={orderClientEmail}
+                        onChange={(e) => setOrderClientEmail(e.target.value)}
+                        placeholder="Ej. cliente@dominio.com"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. SECCIÓN VEHÍCULO */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                    II. Identificación Técnica del Automóvil
+                  </h4>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Marca</label>
+                      <input
+                        type="text"
+                        value={orderVehBrand}
+                        onChange={(e) => setOrderVehBrand(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Modelo</label>
+                      <input
+                        type="text"
+                        value={orderVehModel}
+                        onChange={(e) => setOrderVehModel(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Año</label>
+                      <input
+                        type="number"
+                        value={orderVehYear}
+                        onChange={(e) => setOrderVehYear(parseInt(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Color</label>
+                      <input
+                        type="text"
+                        value={orderVehColor}
+                        onChange={(e) => setOrderVehColor(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Placas</label>
+                      <input
+                        type="text"
+                        value={orderVehPlate}
+                        onChange={(e) => setOrderVehPlate(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono uppercase focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Kilometraje Actual</label>
+                      <input
+                        type="number"
+                        value={orderVehMileage}
+                        onChange={(e) => setOrderVehMileage(parseInt(e.target.value))}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Número de Serie (VIN)</label>
+                      <input
+                        type="text"
+                        value={orderVehSerie}
+                        onChange={(e) => setOrderVehSerie(e.target.value)}
+                        placeholder="17 dígitos"
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono uppercase focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Número de Motor</label>
+                      <input
+                        type="text"
+                        value={orderVehMotor}
+                        onChange={(e) => setOrderVehMotor(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2 font-mono uppercase focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. SECCIÓN CHECKLIST FÍSICO */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                      III. Inventario Físico y Accesorios de Cabina
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold italic font-mono">* 13 PUNTOS CONTROL</span>
+                  </h4>
+                  
+                  {/* Accessories grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    
+                    {[
+                      { key: 'tapetes', label: 'Tapetes' },
+                      { key: 'encendedor', label: 'Encendedor' },
+                      { key: 'estereo', label: 'Estéreo / Bocinas' },
+                      { key: 'tarjetaCirculacion', label: 'Tarjeta Circulación' },
+                      { key: 'compVerificacion', label: 'Comp. Verificación' },
+                      { key: 'polizaSeguro', label: 'Póliza Seguro' },
+                      { key: 'segurosRuedas', label: 'Seguros Ruedas' },
+                      { key: 'gato', label: 'Gato Mecánico' },
+                      { key: 'herramienta', label: 'Herramientas básicas' },
+                      { key: 'extintor', label: 'Extintor' },
+                      { key: 'llantaRefaccion', label: 'Llanta Refacción' },
+                      { key: 'sensoresPresencia', label: 'Sensores de Presencia' },
+                      { key: 'camaraReversa', label: 'Cámara de Reversa' },
+                    ].map((item) => {
+                      const val = (checklist as any)[item.key] || false;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => setChecklist(prev => ({ ...prev, [item.key]: !val }))}
+                          className={`flex items-center justify-between p-2.5 border rounded-xl font-bold text-xs transition-all ${
+                            val 
+                              ? 'bg-amber-50 border-amber-300 text-slate-850' 
+                              : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                          }`}
+                        >
+                          <span className="truncate">{item.label}</span>
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                            val ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 text-transparent'
+                          }`}>
+                            <Check size={10} strokeWidth={3} />
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                  </div>
+
+                  {/* Gas & Body Layout Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                    
+                    {/* Fuel Level */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 md:col-span-1">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Nivel Combustible</span>
+                        </div>
+                        <span className="font-bold text-slate-800 text-xs font-mono bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                          {checklist.fuelLevel}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-col items-center py-2">
+                        <svg className="w-36 h-18 overflow-visible" viewBox="0 0 100 50">
+                          <path d="M 15,45 A 35,35 0 0,1 85,45" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
+                          <path d="M 15,45 A 35,35 0 0,1 85,45" fill="none" stroke="#f59e0b" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(checklist.fuelLevel / 100) * 110} 110`} />
+                          <circle cx="50" cy="45" r="3" fill="#334155" />
+                          <line x1="50" y1="45" x2={50 + 26 * Math.cos((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)} y2={45 + 26 * Math.sin((-180 + (checklist.fuelLevel / 100) * 180) * Math.PI / 180)} stroke="#1e293b" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="25"
+                          value={checklist.fuelLevel}
+                          onChange={(e) => setChecklist(prev => ({ ...prev, fuelLevel: parseInt(e.target.value) }))}
+                          className="w-full mt-3 accent-amber-500 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between w-full text-[8px] font-bold text-slate-400 mt-1 font-mono">
+                          <span>VACÍO</span>
+                          <span>1/2</span>
+                          <span>LLENO</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Damage Body toggles */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 md:col-span-1">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide block">Daños de Carrocería</span>
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setChecklist(prev => ({ ...prev, scratches: !prev.scratches }))}
+                          className={`w-full flex items-center justify-between p-2.5 border rounded-xl text-xs font-bold transition-all ${
+                            checklist.scratches ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <span>Rayones / Raspaduras</span>
+                          <span>{checklist.scratches ? 'SI ✔' : 'NO'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setChecklist(prev => ({ ...prev, dents: !prev.dents }))}
+                          className={`w-full flex items-center justify-between p-2.5 border rounded-xl text-xs font-bold transition-all ${
+                            checklist.dents ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <span>Golpes / Abolladuras</span>
+                          <span>{checklist.dents ? 'SI ✔' : 'NO'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Photo uploaders */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-3 md:col-span-1">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wide block">Registro de Evidencia Visual</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={startCamera} className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold py-2 px-1 rounded-xl transition-all flex items-center justify-center gap-1">
+                          <Camera size={12} className="text-amber-500" />
+                          <span>Cámara</span>
+                        </button>
+                        <label htmlFor="camera-capture-input-integrated" className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold py-2 px-1 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 text-center">
+                          <Upload size={12} />
+                          <span>Móvil / Subir</span>
+                          <input type="file" accept="image/*" capture="environment" multiple onChange={handleFileChange} className="hidden" id="camera-capture-input-integrated" />
+                        </label>
+                      </div>
+                      
+                      {checklist.photos.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-1 max-h-[50px] overflow-y-auto">
+                          {checklist.photos.map((photo, index) => (
+                            <img key={index} src={photo} className="w-full h-8 object-cover rounded border" referrerPolicy="no-referrer" />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-slate-400 italic text-center py-1">Sin fotos asignadas</p>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* Motor Visual & Valuables input */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Estado de Motor (Inspección Visual)</label>
+                      <input
+                        type="text"
+                        value={checklist.inspeccionMotor || ''}
+                        onChange={(e) => setChecklist(prev => ({ ...prev, inspeccionMotor: e.target.value }))}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        placeholder="Ej. Motor sucio, bayoneta de aceite correcta, mangueras intactas"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-bold text-[10px] uppercase mb-1">Objetos de Valor Declarados en Cabina</label>
+                      <input
+                        type="text"
+                        value={checklist.objetosValor || ''}
+                        onChange={(e) => setChecklist(prev => ({ ...prev, objetosValor: e.target.value }))}
+                        className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        placeholder="Ej. Ninguno, herramientas de sonido, silla para bebé"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. FALLA REPORTADA */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                    IV. Falla Reportada por el Cliente / Diagnóstico Solicitado
+                  </h4>
+                  
+                  <div>
+                    <textarea
+                      required
+                      value={reportedFailure}
+                      onChange={(e) => setReportedFailure(e.target.value)}
+                      placeholder="Favor de detallar con precisión los síntomas, ruidos o trabajos específicos que el cliente solicita realizar. Esta información se imprimirá formalmente..."
+                      className="w-full p-3 border border-slate-200 rounded-xl text-xs h-28 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. CONDICIONES DE SERVICIO (THE 10 CONDITIONS FROM THE PHYSICAL IMAGE) */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                    V. Condiciones Generales del Contrato de Adhesión (SAE Oficial)
+                  </h4>
+                  
+                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 max-h-[160px] overflow-y-auto text-[10px] text-slate-500 space-y-2.5 leading-relaxed font-sans">
+                    <p><strong>1. RECEPCIÓN Y PRUEBAS:</strong> El taller recibe el vehículo únicamente para fines de diagnóstico y presupuesto. El cliente autoriza expresamente el traslado de la unidad para pruebas de vialidad bajo su propio riesgo.</p>
+                    <p><strong>2. DIAGNÓSTICOS Y DESARMADO:</strong> Determinar fallas complejas puede implicar desarmes parciales de componentes. Los diagnósticos tienen una vigencia estricta de 5 días naturales tras su emisión oficial.</p>
+                    <p><strong>3. AUTORIZACIÓN POR ESCRITO:</strong> Ninguna labor de reparación física comenzará hasta contar con la validación explícita (física o electrónica) y firma del presupuesto oficial por parte del cliente.</p>
+                    <p><strong>4. REFACCIONES Y RESIDUOS:</strong> Toda pieza reemplazada será entregada al propietario de la unidad al finalizar, exceptuando refacciones de desecho biológico o aquellas reguladas bajo estatutos de garantía federal.</p>
+                    <p><strong>5. GASTOS DE ALMACENAJE:</strong> Transcurridas 48 horas hábiles después del aviso formal de entrega, si la unidad no es recogida, se devengará una penalización diaria de mora por almacenaje de $150.00 MXN.</p>
+                    <p><strong>6. GARANTÍA ESCRITA:</strong> Toda labor mecánica de reparación mecánica avalada goza de una garantía de 30 días o 1,000 km, lo que ocurra primero, respaldando piezas instaladas y mano de obra específica.</p>
+                    <p><strong>7. FORMAS DE LIQUIDACIÓN:</strong> La entrega física de la unidad está condicionada al pago total e irrevocable del saldo por los métodos aprobados (efectivo, transferencia o cargo con tarjeta de crédito/débito).</p>
+                    <p><strong>8. PERTENENCIAS Y VALORES:</strong> El cliente declara bajo protesta de decir verdad que ha retirado todo objeto de alto valor económico o personal. El establecimiento no asume responsabilidad sobre artículos no declarados en el inventario.</p>
+                    <p><strong>9. INSPECCIÓN MECÁNICA PREVIA:</strong> La firma de este documento ratifica la descripción visual asentada por el asesor del taller, liberando a la administración de averías previas ocultas en sistemas integrados.</p>
+                    <p><strong>10. ACUERDO JURISDICCIONAL:</strong> Para la interpretación de este contrato de adhesión, ambas partes acuerdan someterse expresamente a las autoridades correspondientes y tribunales civiles competentes de la Ciudad de México.</p>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 bg-amber-50/50 p-3 rounded-xl border border-amber-200 text-xs">
+                    <input
+                      type="checkbox"
+                      required
+                      id="accept-conditions"
+                      className="mt-0.5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <label htmlFor="accept-conditions" className="font-bold text-slate-800 cursor-pointer">
+                      Acepto las Condiciones de Servicio y ratifico la firma electrónica del cliente para dar inicio al diagnóstico.
+                    </label>
+                  </div>
+                </div>
+
+                {/* ACTION BUTTONS */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-slate-200">
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto flex-1 bg-amber-600 hover:bg-amber-700 text-white font-black py-4 px-6 rounded-xl shadow-lg hover:shadow-amber-600/10 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Send size={16} />
+                    Registrar Entrada y Descargar Orden PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Trigger a quick layout simulation
+                      const dummyOrder: ServiceOrder = {
+                        id: 'NUEVA',
+                        clientId: selectedClientId,
+                        vehicleId: selectedVehicleId,
+                        advisorId: 'emp-1',
+                        mechanicId: orderTecnicoId || 'emp-2',
+                        reportedFailure,
+                        checklist,
+                        diagnostics: '',
+                        diagnosticPhotos: [],
+                        status: 'Diagnostico',
+                        dateOpened: `${orderFecha} ${orderHora}:00`,
+                        folio: orderFolio || 'PREV-01',
+                        fecha: orderFecha,
+                        hora: orderHora,
+                        tecnico: employees.find(e => e.id === orderTecnicoId)?.name || 'Técnico de Guardia',
+                        items: [],
+                        timeLogs: [],
+                        payments: [],
+                        isClockedIn: false,
+                        isPaused: false,
+                        totalHoursWorked: 0
+                      };
+                      const clientObj = clients.find(c => c.id === selectedClientId)!;
+                      const updatedClientObj = {
+                        ...clientObj,
+                        calle: orderClientCalle,
+                        cp: orderClientCp,
+                        colonia: orderClientColonia,
+                        alcaldia: orderClientAlcaldia,
+                        telFijo: orderClientTelFijo,
+                        email: orderClientEmail,
+                        phone: orderClientPhone
+                      };
+                      const vehObj = vehicles.find(v => v.id === selectedVehicleId)!;
+                      const updatedVehObj = {
+                        ...vehObj,
+                        motor: orderVehMotor,
+                        serie: orderVehSerie,
+                        color: orderVehColor,
+                        mileage: orderVehMileage,
+                        brand: orderVehBrand,
+                        model: orderVehModel,
+                        year: orderVehYear,
+                        plate: orderVehPlate
+                      };
+                      generateSaePdf(dummyOrder, updatedClientObj, updatedVehObj, employees);
+                    }}
+                    className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Download size={16} />
+                    Vista Previa PDF
+                  </button>
+                </div>
+
+              </form>
+
             </div>
+          ) : (
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-10 text-center flex flex-col items-center justify-center min-h-[300px]">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 animate-bounce">
+                <Sparkle size={32} />
+              </div>
+              <h3 className="text-white font-bold text-lg font-display">Sistema Digitalizador de Recepción SAE</h3>
+              <p className="text-slate-400 text-xs max-w-sm mt-2 leading-relaxed">
+                Para iniciar el proceso, selecciona un cliente y vincula su vehículo en la barra superior. 
+                El sistema cargará la hoja de entrada homologada con las condiciones del servicio oficial.
+              </p>
+            </div>
+          )}
 
-            <button
-              type="submit"
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 mt-4"
-            >
-              <Send size={14} />
-              Registrar Entrada y Abrir Orden
-            </button>
-          </form>
+        </div>
+      )}
 
-          {/* ADD CLIENT FORM MODAL */}
+      {/* ADD CLIENT FORM MODAL */}
           {showAddClient && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
@@ -1018,8 +1364,6 @@ export default function AdvisorDashboard({
               </div>
             </div>
           )}
-        </div>
-      )}
 
       {/* ESTIMATES, QUOTES & BILLS TAB */}
       {activeTab === 'quotes' && (
