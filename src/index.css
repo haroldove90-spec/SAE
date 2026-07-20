@@ -241,3 +241,43 @@ option {
     opacity: .7;
   }
 }
+
+/* --- SAE SERVICE ORDER PDF GENERATION RESET --- */
+#sae-pdf-render-root, #sae-pdf-render-root * {
+  color: #111827 !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  border-color: #9CA3AF !important;
+}
+
+#sae-pdf-render-root {
+  background-color: #FFFFFF !important;
+}
+
+#sae-pdf-render-root .sae-crimson-bg {
+  background-color: #A21C26 !important;
+  color: #FFFFFF !important;
+}
+
+#sae-pdf-render-root .sae-crimson-text {
+  color: #A21C26 !important;
+}
+
+#sae-pdf-render-root .sae-blue-text {
+  color: #1D4ED8 !important;
+}
+
+#sae-pdf-render-root .sae-light-bg {
+  background-color: #F3F4F6 !important;
+}
+
+#sae-pdf-render-root .sae-white-bg {
+  background-color: #FFFFFF !important;
+}
+
+#sae-pdf-render-root .sae-white-text {
+  color: #FFFFFF !important;
+}
+

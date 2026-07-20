@@ -17,6 +17,7 @@ export interface Client {
   colonia?: string;
   alcaldia?: string;
   telFijo?: string;
+  hasWhatsapp?: boolean;
 }
 
 export interface Vehicle {
@@ -166,6 +167,8 @@ export interface ServiceOrder {
   fecha?: string;
   hora?: string;
   tecnico?: string;
+  clientSignature?: string; // Base64 PNG signature
+  mechanicSignature?: string; // Base64 PNG signature
 }
 
 export type TransactionType = 'Ingreso' | 'Egreso';

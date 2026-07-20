@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
 import { generateSaePdf } from '../utils/saePdf';
+import { SignaturePad } from './SignaturePad';
 
 interface AdvisorDashboardProps {
   clients: Client[];
@@ -131,6 +132,18 @@ export default function AdvisorDashboard({
   const [orderHora, setOrderHora] = useState(new Date().toTimeString().split(' ')[0].substring(0, 5));
   const [orderTecnicoId, setOrderTecnicoId] = useState('');
 
+  // Signature states & WhatsApp states
+  const [clientSignature, setClientSignature] = useState<string | undefined>(undefined);
+  const [mechanicSignature, setMechanicSignature] = useState<string | undefined>(undefined);
+  const [clientHasWhatsapp, setClientHasWhatsapp] = useState(true);
+
+  // Save Success Modal states
+  const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState('');
+  const [successOrderFolio, setSuccessOrderFolio] = useState('');
+  const [successClientPhone, setSuccessClientPhone] = useState('');
+  const [successClientHasWhatsapp, setSuccessClientHasWhatsapp] = useState(true);
+
   // Synchronize edit states when selected client changes
   useEffect(() => {
     if (selectedClientId) {
@@ -143,6 +156,7 @@ export default function AdvisorDashboard({
         setOrderClientTelFijo(c.telFijo || '');
         setOrderClientEmail(c.email || '');
         setOrderClientPhone(c.phone || '');
+        setClientHasWhatsapp(c.hasWhatsapp !== false);
       }
     } else {
       setOrderClientCalle('');
@@ -152,6 +166,7 @@ export default function AdvisorDashboard({
       setOrderClientTelFijo('');
       setOrderClientEmail('');
       setOrderClientPhone('');
+      setClientHasWhatsapp(true);
     }
   }, [selectedClientId, clients]);
 
@@ -303,6 +318,12 @@ export default function AdvisorDashboard({
       return;
     }
 
+    // MANDATORY SIGNATURES CHECK
+    if (!clientSignature || !mechanicSignature) {
+      alert('⚠️ Error de Validación: Las firmas digitales del Cliente y del Mecánico son obligatorias para poder registrar y guardar la Orden de Servicio de SAE. Por favor firme en los recuadros correspondientes.');
+      return;
+    }
+
     // 1. Persist the edited client fields back to state
     const currentClient = clients.find(c => c.id === selectedClientId);
     if (currentClient) {
@@ -315,6 +336,7 @@ export default function AdvisorDashboard({
         telFijo: orderClientTelFijo,
         email: orderClientEmail,
         phone: orderClientPhone,
+        hasWhatsapp: clientHasWhatsapp,
         address: `${orderClientCalle}, Col. ${orderClientColonia}, ${orderClientAlcaldia}, C.P. ${orderClientCp}`
       });
     }
@@ -354,46 +376,53 @@ export default function AdvisorDashboard({
       folio: finalFolio,
       fecha: orderFecha,
       hora: orderHora,
-      tecnico: assignedMechanic?.name || 'Técnico de Guardia'
+      tecnico: assignedMechanic?.name || 'Técnico de Guardia',
+      clientSignature,
+      mechanicSignature
     });
 
-    alert(`¡Orden de Servicio Folio ${finalFolio} (${created.id}) creada exitosamente!\nSu estatus inicial es 'En Diagnóstico'.`);
-    setSelectedOrderId(created.id);
-    
-    // Automatically generate the entry sheet PDF to save staff time!
+    // Populate Success Modal states
+    setSuccessOrderId(created.id);
+    setSuccessOrderFolio(finalFolio);
+    setSuccessClientPhone(orderClientPhone);
+    setSuccessClientHasWhatsapp(clientHasWhatsapp);
+    setShowSaveSuccessModal(true);
+
+    // Automatically generate and download the entry sheet PDF to save staff time
+    const freshClient = {
+      ...(currentClient || { id: selectedClientId, name: 'Cliente', creditBalance: 0, creditLimit: 0 }),
+      calle: orderClientCalle,
+      cp: orderClientCp,
+      colonia: orderClientColonia,
+      alcaldia: orderClientAlcaldia,
+      telFijo: orderClientTelFijo,
+      email: orderClientEmail,
+      phone: orderClientPhone,
+      hasWhatsapp: clientHasWhatsapp,
+      address: `${orderClientCalle}, Col. ${orderClientColonia}, ${orderClientAlcaldia}, C.P. ${orderClientCp}`
+    };
+
+    const freshVehicle = {
+      ...(currentVehicle || { id: selectedVehicleId, brand: '', model: '', year: 2020, plate: '', ownerId: selectedClientId || '', vin: '', engomadoColor: 'blue' as const, plateEnding: '0' }),
+      motor: orderVehMotor,
+      serie: orderVehSerie,
+      color: orderVehColor,
+      mileage: orderVehMileage,
+      brand: orderVehBrand,
+      model: orderVehModel,
+      year: orderVehYear,
+      plate: orderVehPlate
+    };
+
     setTimeout(() => {
-      if (confirm('¿Desea descargar e imprimir la Orden de Entrada en formato PDF oficial de SAE?')) {
-        const freshClient = {
-          ...currentClient!,
-          calle: orderClientCalle,
-          cp: orderClientCp,
-          colonia: orderClientColonia,
-          alcaldia: orderClientAlcaldia,
-          telFijo: orderClientTelFijo,
-          email: orderClientEmail,
-          phone: orderClientPhone,
-          address: `${orderClientCalle}, Col. ${orderClientColonia}, ${orderClientAlcaldia}, C.P. ${orderClientCp}`
-        };
-        const freshVehicle = {
-          ...currentVehicle!,
-          motor: orderVehMotor,
-          serie: orderVehSerie,
-          color: orderVehColor,
-          mileage: orderVehMileage,
-          brand: orderVehBrand,
-          model: orderVehModel,
-          year: orderVehYear,
-          plate: orderVehPlate
-        };
-        generateSaePdf(created, freshClient, freshVehicle, employees);
-      }
-    }, 300);
+      generateSaePdf(created, freshClient, freshVehicle, employees);
+    }, 200);
 
-    setActiveTab('quotes'); // redirect to quotes to add budget lines
-
-    // Reset fields
+    // Reset fields & Signatures
     setReportedFailure('');
     setOrderFolio('');
+    setClientSignature(undefined);
+    setMechanicSignature(undefined);
     setChecklist({
       scratches: false,
       dents: false,
@@ -860,6 +889,19 @@ export default function AdvisorDashboard({
                         className="w-full bg-white border border-slate-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
                       />
                     </div>
+                    <div className="md:col-span-3 flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="client-has-whatsapp"
+                        checked={clientHasWhatsapp}
+                        onChange={(e) => setClientHasWhatsapp(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4"
+                      />
+                      <label htmlFor="client-has-whatsapp" className="text-xs font-bold text-slate-400 cursor-pointer flex items-center gap-1.5 select-none">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                        ¿El cliente cuenta con WhatsApp activo? (Para envío automático de la Orden de Entrada)
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -1155,6 +1197,36 @@ export default function AdvisorDashboard({
                     <p><strong>10. ACUERDO JURISDICCIONAL:</strong> Para la interpretación de este contrato de adhesión, ambas partes acuerdan someterse expresamente a las autoridades correspondientes y tribunales civiles competentes de la Ciudad de México.</p>
                   </div>
 
+                  {/* VI. SIGNATURES SECTION (MANDATORY) */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-slate-900 border-b border-slate-200 pb-1 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3 bg-amber-500 rounded"></span>
+                      VI. Firmas Electrónicas de Conformidad (Obligatorias)
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4">
+                        <SignaturePad 
+                          id="client-sig"
+                          label="Firma del Cliente (Conformidad de Ingreso y Condiciones)"
+                          placeholder="Dibuje o escriba su firma aquí"
+                          onSave={(sig) => setClientSignature(sig)}
+                        />
+                        <p className="text-[10px] text-slate-500 mt-2 italic">Acepta términos de revisión y desarmado de diagnóstico.</p>
+                      </div>
+
+                      <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4">
+                        <SignaturePad 
+                          id="mechanic-sig"
+                          label="Firma del Asesor / Empresa"
+                          placeholder="Dibuje o escriba su firma aquí"
+                          onSave={(sig) => setMechanicSignature(sig)}
+                        />
+                        <p className="text-[10px] text-slate-500 mt-2 italic">Recibe e inspecciona el auto de acuerdo al inventario.</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex items-start gap-2.5 bg-amber-50/50 p-3 rounded-xl border border-amber-200 text-xs">
                     <input
                       type="checkbox"
@@ -1202,7 +1274,9 @@ export default function AdvisorDashboard({
                         payments: [],
                         isClockedIn: false,
                         isPaused: false,
-                        totalHoursWorked: 0
+                        totalHoursWorked: 0,
+                        clientSignature,
+                        mechanicSignature
                       };
                       const clientObj = clients.find(c => c.id === selectedClientId)!;
                       const updatedClientObj = {
@@ -1841,9 +1915,49 @@ export default function AdvisorDashboard({
                             <div key={o.id} className="relative text-xs space-y-1">
                               {/* circular node */}
                               <div className="absolute -left-[17px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 border-2 border-white"></div>
-                              <div className="flex justify-between items-center font-bold text-slate-800">
-                                <span className="font-mono text-amber-600 bg-amber-50 px-1.5 rounded">{o.id}</span>
-                                <span className="text-slate-400 font-normal">{o.dateOpened.split(' ')[0]}</span>
+                              <div className="flex flex-wrap justify-between items-center gap-2 font-bold text-slate-800 border-b border-slate-100 pb-1.5 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-amber-600 bg-amber-50 px-1.5 rounded">{o.id}</span>
+                                  {o.folio && <span className="text-[10px] text-slate-500 font-sans">Folio: <strong>{o.folio}</strong></span>}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-400 font-normal mr-2">{o.dateOpened.split(' ')[0]}</span>
+                                  
+                                  {/* Download PDF button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const clientObj = clients.find(c => c.id === o.clientId);
+                                      const vehObj = vehicles.find(v => v.id === o.vehicleId);
+                                      generateSaePdf(o, clientObj, vehObj, employees);
+                                    }}
+                                    className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded border border-amber-200 flex items-center gap-1 text-[10px] transition-colors"
+                                    title="Descargar Orden de Entrada en PDF"
+                                  >
+                                    <Download size={10} />
+                                    <span>Descargar PDF</span>
+                                  </button>
+
+                                  {/* WhatsApp button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const clientObj = clients.find(c => c.id === o.clientId);
+                                      if (clientObj?.hasWhatsapp === false) {
+                                        alert('Aviso: El cliente no cuenta con WhatsApp activo de acuerdo a su perfil registrado.');
+                                      } else {
+                                        const phone = clientObj?.phone || '';
+                                        const msg = `Hola, te compartimos tu Orden de Entrada de SAE con el Folio: ${o.folio || o.id}. Estatus actual: En Diagnóstico. ¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
+                                        window.open(`https://api.whatsapp.com/send?phone=52${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+                                      }
+                                    }}
+                                    className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 flex items-center gap-1 text-[10px] transition-colors"
+                                    title="Enviar por WhatsApp"
+                                  >
+                                    <Send size={10} />
+                                    <span>Enviar WhatsApp</span>
+                                  </button>
+                                </div>
                               </div>
                               <p className="text-slate-700"><strong>Falla reportada:</strong> {o.reportedFailure}</p>
                               {o.diagnostics && <p className="text-slate-600 bg-slate-50/50 p-1.5 rounded border border-slate-100"><strong>Diagnóstico:</strong> {o.diagnostics}</p>}
@@ -1930,6 +2044,121 @@ export default function AdvisorDashboard({
                   <span>Capturar Foto</span>
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Success and WhatsApp Delivery Modal Overlay */}
+      {showSaveSuccessModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-lg overflow-hidden shadow-2xl flex flex-col transform scale-100 transition-all">
+            {/* Header */}
+            <div className="bg-slate-900 px-6 py-5 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <CheckSquare size={20} className="text-emerald-500 animate-bounce" />
+                <h3 className="font-black text-base md:text-lg font-display">¡Orden Registrada Correctamente!</h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowSaveSuccessModal(false);
+                  if (setActiveTab) setActiveTab('quotes');
+                }}
+                className="text-slate-400 hover:text-white transition-colors bg-slate-800 p-1.5 rounded-full"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-5 text-slate-800 text-left">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-600 mx-auto border border-emerald-500/20">
+                  <Check size={36} strokeWidth={3} />
+                </div>
+                <h4 className="font-black text-lg text-slate-900 mt-2">Folio de Orden: {successOrderFolio}</h4>
+                <p className="text-xs text-slate-500">ID de Sistema: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{successOrderId}</span></p>
+              </div>
+
+              {/* Success Info Alert box */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold">FECHA DE INGRESO:</span>
+                  <span className="font-bold text-slate-850">{new Date().toISOString().split('T')[0]}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-400 font-bold">ESTATUS INICIAL:</span>
+                  <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold text-[10px]">EN DIAGNÓSTICO</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-bold">DOCUMENTO PDF:</span>
+                  <span className="text-emerald-600 font-bold flex items-center gap-1">
+                    <Download size={12} /> Descarga Iniciada Automáticamente
+                  </span>
+                </div>
+              </div>
+
+              {/* WhatsApp Notification Block */}
+              {successClientHasWhatsapp ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 text-left">
+                  <div className="flex items-start gap-2.5">
+                    <div className="bg-emerald-500 text-white p-1 rounded-lg shrink-0">
+                      <Send size={16} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-emerald-800 uppercase tracking-wider">Envío Automático WhatsApp</p>
+                      <p className="text-xs text-emerald-700 leading-relaxed">
+                        Se ha preparado la Orden de Entrada para enviarse al celular registrado del cliente: <strong className="font-bold text-emerald-900">{successClientPhone}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msg = `Hola, te compartimos tu Orden de Entrada de SAE con el Folio: ${successOrderFolio}. Puedes consultar tu estatus en tiempo real en nuestro portal. ¡La escudería que te lleva seguro a tu destino! 🚗🏁`;
+                      window.open(`https://api.whatsapp.com/send?phone=52${successClientPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md hover:shadow-emerald-600/10 transition-all flex items-center justify-center gap-2 text-xs"
+                  >
+                    <Send size={14} />
+                    <span>Abrir WhatsApp Web y Enviar Mensaje</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2.5 text-left">
+                  <div className="flex items-start gap-2.5">
+                    <div className="bg-amber-500 text-white p-1 rounded-lg shrink-0">
+                      <AlertCircle size={16} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-amber-800 uppercase tracking-wider">Aviso de No Envío (WhatsApp)</p>
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        El documento **no se ha enviado** por WhatsApp ya que se indicó que el cliente no cuenta con esta aplicación.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-amber-500/5 border border-amber-200/50 p-2.5 rounded-lg text-[11px] text-amber-800 leading-relaxed italic">
+                    💡 <strong>Información para el Asesor:</strong> Podrá enviar el documento en un futuro ingresando a la pestaña de consulta (CRM) o re-editando el teléfono móvil del cliente.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaveSuccessModal(false);
+                  if (setActiveTab) setActiveTab('quotes');
+                }}
+                className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-2"
+              >
+                <span>Ir a Cotizador y Presupuesto</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
           </div>
         </div>
