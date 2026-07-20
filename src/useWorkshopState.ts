@@ -12,6 +12,7 @@ import {
   INITIAL_TRANSACTIONS, 
   INITIAL_SETTINGS 
 } from './mockData';
+import { supabase } from './lib/supabase';
 
 export function useWorkshopState() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -26,87 +27,274 @@ export function useWorkshopState() {
   const [settings, setSettings] = useState<WorkshopSettings>(INITIAL_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
-  // Initialize data from LocalStorage or mock data
-  useEffect(() => {
-    const localClients = localStorage.getItem('wt_clients');
-    const localVehicles = localStorage.getItem('wt_vehicles');
-    const localEmployees = localStorage.getItem('wt_employees');
-    const localInventory = localStorage.getItem('wt_inventory');
-    const localSuppliers = localStorage.getItem('wt_suppliers');
-    const localPurchaseOrders = localStorage.getItem('wt_purchase_orders');
-    const localRequisitions = localStorage.getItem('wt_requisitions');
-    const localOrders = localStorage.getItem('wt_orders');
-    const localTransactions = localStorage.getItem('wt_transactions');
-    const localSettings = localStorage.getItem('wt_settings');
+  // Supabase states
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-    setClients(localClients ? JSON.parse(localClients) : INITIAL_CLIENTS);
-    setVehicles(localVehicles ? JSON.parse(localVehicles) : INITIAL_VEHICLES);
-    setEmployees(localEmployees ? JSON.parse(localEmployees) : INITIAL_EMPLOYEES);
-    setInventory(localInventory ? JSON.parse(localInventory) : INITIAL_INVENTORY);
-    setSuppliers(localSuppliers ? JSON.parse(localSuppliers) : INITIAL_SUPPLIERS);
-    setPurchaseOrders(localPurchaseOrders ? JSON.parse(localPurchaseOrders) : INITIAL_PURCHASE_ORDERS);
-    setRequisitions(localRequisitions ? JSON.parse(localRequisitions) : INITIAL_REQUISITIONS);
-    setOrders(localOrders ? JSON.parse(localOrders) : INITIAL_ORDERS);
-    setTransactions(localTransactions ? JSON.parse(localTransactions) : INITIAL_TRANSACTIONS);
-    let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
-    if (parsedSettings && parsedSettings.address && (parsedSettings.address.includes('Palmas') || parsedSettings.address.includes('palmas'))) {
-      parsedSettings.address = INITIAL_SETTINGS.address;
-      parsedSettings.phone = INITIAL_SETTINGS.phone;
-    }
-    setSettings(parsedSettings);
-    setLoaded(true);
+  // Initialize data from LocalStorage or mock data, then fetch from Supabase
+  useEffect(() => {
+    const initializeData = async () => {
+      const localClients = localStorage.getItem('wt_clients');
+      const localVehicles = localStorage.getItem('wt_vehicles');
+      const localEmployees = localStorage.getItem('wt_employees');
+      const localInventory = localStorage.getItem('wt_inventory');
+      const localSuppliers = localStorage.getItem('wt_suppliers');
+      const localPurchaseOrders = localStorage.getItem('wt_purchase_orders');
+      const localRequisitions = localStorage.getItem('wt_requisitions');
+      const localOrders = localStorage.getItem('wt_orders');
+      const localTransactions = localStorage.getItem('wt_transactions');
+      const localSettings = localStorage.getItem('wt_settings');
+
+      setClients(localClients ? JSON.parse(localClients) : INITIAL_CLIENTS);
+      setVehicles(localVehicles ? JSON.parse(localVehicles) : INITIAL_VEHICLES);
+      setEmployees(localEmployees ? JSON.parse(localEmployees) : INITIAL_EMPLOYEES);
+      setInventory(localInventory ? JSON.parse(localInventory) : INITIAL_INVENTORY);
+      setSuppliers(localSuppliers ? JSON.parse(localSuppliers) : INITIAL_SUPPLIERS);
+      setPurchaseOrders(localPurchaseOrders ? JSON.parse(localPurchaseOrders) : INITIAL_PURCHASE_ORDERS);
+      setRequisitions(localRequisitions ? JSON.parse(localRequisitions) : INITIAL_REQUISITIONS);
+      setOrders(localOrders ? JSON.parse(localOrders) : INITIAL_ORDERS);
+      setTransactions(localTransactions ? JSON.parse(localTransactions) : INITIAL_TRANSACTIONS);
+      
+      let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
+      if (parsedSettings && parsedSettings.address && (parsedSettings.address.includes('Palmas') || parsedSettings.address.includes('palmas'))) {
+        parsedSettings.address = INITIAL_SETTINGS.address;
+        parsedSettings.phone = INITIAL_SETTINGS.phone;
+      }
+      setSettings(parsedSettings);
+      setLoaded(true);
+
+      // Now, try fetching from Supabase to hydrate with latest cloud data
+      await fetchFromSupabase(true);
+    };
+
+    initializeData();
   }, []);
 
-  // Sync to LocalStorage
+  const fetchFromSupabase = async (isInitialLoad = false) => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      // Pull clients
+      const { data: clientsData, error: clientsErr } = await supabase.from('clients').select('*');
+      if (clientsErr) throw clientsErr;
+      
+      // Pull vehicles
+      const { data: vehiclesData, error: vehiclesErr } = await supabase.from('vehicles').select('*');
+      if (vehiclesErr) throw vehiclesErr;
+
+      // Pull employees
+      const { data: employeesData, error: employeesErr } = await supabase.from('employees').select('*');
+      if (employeesErr) throw employeesErr;
+
+      // Pull inventory
+      const { data: inventoryData, error: inventoryErr } = await supabase.from('inventory').select('*');
+      if (inventoryErr) throw inventoryErr;
+
+      // Pull suppliers
+      const { data: suppliersData, error: suppliersErr } = await supabase.from('suppliers').select('*');
+      if (suppliersErr) throw suppliersErr;
+
+      // Pull purchase_orders
+      const { data: poData, error: poErr } = await supabase.from('purchase_orders').select('*');
+      if (poErr) throw poErr;
+
+      // Pull requisitions
+      const { data: requisitionsData, error: requisitionsErr } = await supabase.from('requisitions').select('*');
+      if (requisitionsErr) throw requisitionsErr;
+
+      // Pull service_orders
+      const { data: ordersData, error: ordersErr } = await supabase.from('service_orders').select('*');
+      if (ordersErr) throw ordersErr;
+
+      // Pull transactions
+      const { data: txData, error: txErr } = await supabase.from('transactions').select('*');
+      if (txErr) throw txErr;
+
+      // Pull settings
+      const { data: settingsData, error: settingsErr } = await supabase.from('workshop_settings').select('*').eq('id', 'default').maybeSingle();
+      if (settingsErr) throw settingsErr;
+
+      // Connection is successful
+      setSupabaseConnected(true);
+
+      // Update local states if we got remote data
+      if (clientsData && clientsData.length > 0) setClients(clientsData);
+      if (vehiclesData && vehiclesData.length > 0) setVehicles(vehiclesData);
+      if (employeesData && employeesData.length > 0) setEmployees(employeesData);
+      if (inventoryData && inventoryData.length > 0) setInventory(inventoryData);
+      if (suppliersData && suppliersData.length > 0) setSuppliers(suppliersData);
+      if (poData && poData.length > 0) setPurchaseOrders(poData);
+      if (requisitionsData && requisitionsData.length > 0) setRequisitions(requisitionsData);
+      if (ordersData && ordersData.length > 0) setOrders(ordersData);
+      if (txData && txData.length > 0) setTransactions(txData);
+      if (settingsData) setSettings(settingsData);
+
+      console.log('Fidelidad Supabase: Todo sincronizado correctamente.');
+    } catch (err: any) {
+      console.warn('Supabase Connection or Schema issue:', err);
+      // If table/relation doesn't exist yet, we still set connection as True but with distinct warning
+      if (err.code === '42P01') {
+        setSupabaseConnected(true);
+        setSyncError('Conectado, pero falta ejecutar el script SQL de creación de tablas.');
+      } else {
+        setSupabaseConnected(false);
+        setSyncError(err.message || 'Error de conexión');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const uploadToSupabase = async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      if (clients.length > 0) {
+        const { error } = await supabase.from('clients').upsert(clients);
+        if (error) throw error;
+      }
+      if (vehicles.length > 0) {
+        const { error } = await supabase.from('vehicles').upsert(vehicles);
+        if (error) throw error;
+      }
+      if (employees.length > 0) {
+        const { error } = await supabase.from('employees').upsert(employees);
+        if (error) throw error;
+      }
+      if (inventory.length > 0) {
+        const { error } = await supabase.from('inventory').upsert(inventory);
+        if (error) throw error;
+      }
+      if (suppliers.length > 0) {
+        const { error } = await supabase.from('suppliers').upsert(suppliers);
+        if (error) throw error;
+      }
+      if (purchaseOrders.length > 0) {
+        const { error } = await supabase.from('purchase_orders').upsert(purchaseOrders);
+        if (error) throw error;
+      }
+      if (requisitions.length > 0) {
+        const { error } = await supabase.from('requisitions').upsert(requisitions);
+        if (error) throw error;
+      }
+      if (orders.length > 0) {
+        const { error } = await supabase.from('service_orders').upsert(orders);
+        if (error) throw error;
+      }
+      if (transactions.length > 0) {
+        const { error } = await supabase.from('transactions').upsert(transactions);
+        if (error) throw error;
+      }
+      if (settings) {
+        const { error } = await supabase.from('workshop_settings').upsert({ id: 'default', ...settings });
+        if (error) throw error;
+      }
+
+      setSupabaseConnected(true);
+      console.log('Todos los datos locales migrados correctamente a Supabase.');
+    } catch (err: any) {
+      console.error('Error uploading to Supabase:', err);
+      setSyncError(err.message || 'Error al sincronizar datos locales');
+      setSupabaseConnected(false);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Helper to centralize safe background syncing with Supabase
+  const safeUpsert = async (table: string, data: any) => {
+    try {
+      const { error } = await supabase.from(table).upsert(data);
+      if (error) {
+        console.warn(`Error auto-syncing table ${table}:`, error.message);
+      }
+    } catch (err) {
+      console.error(`Exception auto-syncing table ${table}:`, err);
+    }
+  };
+
+  // Sync to LocalStorage & Supabase Background Sync
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_clients', JSON.stringify(clients));
-  }, [clients, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('clients', clients);
+    }
+  }, [clients, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_vehicles', JSON.stringify(vehicles));
-  }, [vehicles, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('vehicles', vehicles);
+    }
+  }, [vehicles, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_employees', JSON.stringify(employees));
-  }, [employees, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('employees', employees);
+    }
+  }, [employees, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_inventory', JSON.stringify(inventory));
-  }, [inventory, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('inventory', inventory);
+    }
+  }, [inventory, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_suppliers', JSON.stringify(suppliers));
-  }, [suppliers, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('suppliers', suppliers);
+    }
+  }, [suppliers, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_purchase_orders', JSON.stringify(purchaseOrders));
-  }, [purchaseOrders, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('purchase_orders', purchaseOrders);
+    }
+  }, [purchaseOrders, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_requisitions', JSON.stringify(requisitions));
-  }, [requisitions, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('requisitions', requisitions);
+    }
+  }, [requisitions, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_orders', JSON.stringify(orders));
-  }, [orders, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('service_orders', orders);
+    }
+  }, [orders, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_transactions', JSON.stringify(transactions));
-  }, [transactions, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('transactions', transactions);
+    }
+  }, [transactions, loaded, supabaseConnected]);
 
   useEffect(() => {
     if (!loaded) return;
     localStorage.setItem('wt_settings', JSON.stringify(settings));
-  }, [settings, loaded]);
+    if (supabaseConnected && !isSyncing) {
+      safeUpsert('workshop_settings', { id: 'default', ...settings });
+    }
+  }, [settings, loaded, supabaseConnected]);
+
 
   // Actions
 
@@ -562,6 +750,13 @@ export function useWorkshopState() {
     transactions,
     settings,
     setSettings,
+    
+    // Supabase Sync State & Actions
+    isSyncing,
+    supabaseConnected,
+    syncError,
+    fetchFromSupabase,
+    uploadToSupabase,
     
     // Actions
     addClient,

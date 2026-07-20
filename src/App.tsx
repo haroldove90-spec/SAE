@@ -9,7 +9,7 @@ import {
   Shield, User, Wrench, Package, Car, Laptop, Clock, 
   Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle,
   Smartphone, Download, X, Home, LogOut, TrendingUp, DollarSign, Users,
-  FileText, Calendar, History, ListFilter, BellRing
+  FileText, Calendar, History, ListFilter, BellRing, Database, Cloud, RefreshCw
 } from 'lucide-react';
 import { useWorkshopState } from './useWorkshopState';
 import { UserRole } from './types';
@@ -34,6 +34,13 @@ export default function App() {
     transactions,
     settings,
     setSettings,
+    
+    // Supabase Sync State & Actions
+    isSyncing,
+    supabaseConnected,
+    syncError,
+    fetchFromSupabase,
+    uploadToSupabase,
     
     // Actions
     addClient,
@@ -251,6 +258,41 @@ export default function App() {
                 <span>Instalar App SAE</span>
               </button>
 
+              {/* Supabase Cloud Connection Status */}
+              <div className="flex items-center gap-3 bg-white border border-slate-200 px-3.5 py-2 rounded-xl text-xs shadow-sm">
+                <Database size={15} className={supabaseConnected ? "text-emerald-500 animate-pulse" : "text-amber-500"} />
+                <div className="text-left">
+                  <p className="text-[9px] text-slate-400 font-bold uppercase leading-none tracking-wider">Supabase Cloud</p>
+                  <p className="font-mono text-[10px] font-bold text-slate-700 leading-none mt-1">
+                    {supabaseConnected === true ? (
+                      <span className="text-emerald-600">Conectado</span>
+                    ) : supabaseConnected === false ? (
+                      <span className="text-red-500">Error Conexión</span>
+                    ) : (
+                      <span className="text-slate-400">Verificando...</span>
+                    )}
+                  </p>
+                </div>
+                {supabaseConnected && (
+                  <button
+                    onClick={() => fetchFromSupabase()}
+                    disabled={isSyncing}
+                    className="ml-1 p-1 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                    title="Sincronizar ahora con Supabase"
+                  >
+                    <RefreshCw size={11} className={isSyncing ? "animate-spin text-[#8D6A28]" : ""} />
+                  </button>
+                )}
+                {!supabaseConnected && syncError && (
+                  <div className="relative group ml-1">
+                    <AlertTriangle size={12} className="text-amber-500 cursor-help" />
+                    <div className="absolute right-0 top-6 hidden group-hover:block bg-slate-950 text-white text-[10px] p-2.5 rounded-xl border border-slate-800 shadow-xl w-60 z-50 text-left leading-relaxed">
+                      {syncError}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* CDMX Time Tracker */}
               <div className="text-right hidden md:block">
                 <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider">Simulación Local CDMX</p>
@@ -415,6 +457,10 @@ export default function App() {
                     resetDatabase={resetDatabase}
                     activeTab={adminTab}
                     setActiveTab={setAdminTab}
+                    isSyncing={isSyncing}
+                    supabaseConnected={supabaseConnected}
+                    syncError={syncError}
+                    uploadToSupabase={uploadToSupabase}
                   />
                 )}
 

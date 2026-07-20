@@ -23,6 +23,10 @@ interface AdminDashboardProps {
   resetDatabase: () => void;
   activeTab?: 'metrics' | 'finances' | 'personnel' | 'config';
   setActiveTab?: (tab: 'metrics' | 'finances' | 'personnel' | 'config') => void;
+  isSyncing?: boolean;
+  supabaseConnected?: boolean | null;
+  syncError?: string | null;
+  uploadToSupabase?: () => Promise<void>;
 }
 
 export default function AdminDashboard({
@@ -42,7 +46,11 @@ export default function AdminDashboard({
   handleClientCreditPayment,
   resetDatabase,
   activeTab: controlledActiveTab,
-  setActiveTab: controlledSetActiveTab
+  setActiveTab: controlledSetActiveTab,
+  isSyncing = false,
+  supabaseConnected = null,
+  syncError = null,
+  uploadToSupabase = async () => {}
 }: AdminDashboardProps) {
   const [localActiveTab, setLocalActiveTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>('metrics');
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
@@ -1041,6 +1049,53 @@ export default function AdminDashboard({
                 </div>
                 <p className="text-[10px] text-slate-500">Permite enviar cotizaciones digitales y actualizaciones de estado automáticamente al celular del cliente.</p>
               </div>
+            </div>
+
+            {/* Supabase Database Migration & Status Panel */}
+            <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-bold text-slate-800 flex items-center gap-1.5 text-xs font-display">
+                  <Layers size={14} className="text-[#8D6A28]" />
+                  Base de Datos Supabase Cloud
+                </h5>
+                {supabaseConnected ? (
+                  <span className="px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800 rounded-full text-[9px] animate-pulse">
+                    CONECTADO
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 font-bold bg-amber-100 text-amber-800 rounded-full text-[9px]">
+                    DESCONECTADO
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Toda inserción, actualización o eliminación realizada se guardará localmente y se respaldará automáticamente en su base de datos PostgreSQL de Supabase en tiempo real.
+              </p>
+
+              {syncError && (
+                <div className="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-100 text-[9px] font-mono whitespace-pre-wrap break-all leading-normal">
+                  <strong>Nota / Estado:</strong> {syncError}
+                </div>
+              )}
+
+              {supabaseConnected && (
+                <div className="space-y-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={uploadToSupabase}
+                    disabled={isSyncing}
+                    className="w-full flex items-center justify-center gap-1.5 bg-[#8D6A28] hover:bg-[#a67d32] text-white font-bold py-2 rounded-lg transition-all shadow-sm disabled:opacity-50 text-[10px] cursor-pointer"
+                    title="Subir base de datos local actual para sobreescribir Supabase"
+                  >
+                    <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
+                    <span>Migrar Datos Locales a Supabase</span>
+                  </button>
+                  <p className="text-[9px] text-slate-400 text-center">
+                    Carga el historial y la configuración local acumulada en este navegador a la base de datos centralizada en la nube.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
