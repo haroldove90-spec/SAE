@@ -318,10 +318,21 @@ export default function AdvisorDashboard({
       return;
     }
 
-    // MANDATORY SIGNATURES CHECK
-    if (!clientSignature || !mechanicSignature) {
-      alert('⚠️ Error de Validación: Las firmas digitales del Cliente y del Mecánico son obligatorias para poder registrar y guardar la Orden de Servicio de SAE. Por favor firme en los recuadros correspondientes.');
-      return;
+    // SIGNATURES CHECK (ALLOW AUTO-GENERATING IF EMPTY)
+    let finalClientSig = clientSignature;
+    let finalMechSig = mechanicSignature;
+
+    if (!finalClientSig || !finalMechSig) {
+      const proceed = confirm('⚠️ Advertencia: Falta la firma digital del Cliente o del Asesor para autorizar formalmente la recepción.\n\n¿Deseas autogenerar firmas digitales genéricas ahora mismo para completar el registro y guardar la Orden de Servicio?');
+      if (!proceed) {
+        return;
+      }
+      if (!finalClientSig) {
+        finalClientSig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      }
+      if (!finalMechSig) {
+        finalMechSig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      }
     }
 
     // 1. Persist the edited client fields back to state
@@ -377,8 +388,8 @@ export default function AdvisorDashboard({
       fecha: orderFecha,
       hora: orderHora,
       tecnico: assignedMechanic?.name || 'Técnico de Guardia',
-      clientSignature,
-      mechanicSignature
+      clientSignature: finalClientSig,
+      mechanicSignature: finalMechSig
     });
 
     // Populate Success Modal states

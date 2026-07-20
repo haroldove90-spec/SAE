@@ -118,17 +118,31 @@ export function useWorkshopState() {
       // Connection is successful
       setSupabaseConnected(true);
 
-      // Update local states if we got remote data
-      if (clientsData && clientsData.length > 0) setClients(clientsData);
-      if (vehiclesData && vehiclesData.length > 0) setVehicles(vehiclesData);
-      if (employeesData && employeesData.length > 0) setEmployees(employeesData);
-      if (inventoryData && inventoryData.length > 0) setInventory(inventoryData);
-      if (suppliersData && suppliersData.length > 0) setSuppliers(suppliersData);
-      if (poData && poData.length > 0) setPurchaseOrders(poData);
-      if (requisitionsData && requisitionsData.length > 0) setRequisitions(requisitionsData);
-      if (ordersData && ordersData.length > 0) setOrders(ordersData);
-      if (txData && txData.length > 0) setTransactions(txData);
-      if (settingsData) setSettings(settingsData);
+      const mergeLocalAndRemote = <T extends { id: string }>(local: T[], remote: T[]): T[] => {
+        const remoteMap = new Map(remote.map(item => [item.id, item]));
+        const merged = [...remote];
+        local.forEach(localItem => {
+          if (!remoteMap.has(localItem.id)) {
+            merged.push(localItem);
+          }
+        });
+        return merged;
+      };
+
+      // Update local states by merging remote data with current local data
+      setClients(prev => mergeLocalAndRemote(prev, clientsData || []));
+      setVehicles(prev => mergeLocalAndRemote(prev, vehiclesData || []));
+      setEmployees(prev => mergeLocalAndRemote(prev, employeesData || []));
+      setInventory(prev => mergeLocalAndRemote(prev, inventoryData || []));
+      setSuppliers(prev => mergeLocalAndRemote(prev, suppliersData || []));
+      setPurchaseOrders(prev => mergeLocalAndRemote(prev, poData || []));
+      setRequisitions(prev => mergeLocalAndRemote(prev, requisitionsData || []));
+      setOrders(prev => mergeLocalAndRemote(prev, ordersData || []));
+      setTransactions(prev => mergeLocalAndRemote(prev, txData || []));
+      
+      if (settingsData) {
+        setSettings(prev => ({ ...prev, ...settingsData }));
+      }
 
       console.log('Fidelidad Supabase: Todo sincronizado correctamente.');
     } catch (err: any) {

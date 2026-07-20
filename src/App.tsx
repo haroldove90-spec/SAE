@@ -72,17 +72,62 @@ export default function App() {
   } = useWorkshopState();
 
   // Active view role
-  const [currentRole, setCurrentRole] = useState<UserRole>('admin');
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
+    const saved = localStorage.getItem('sae_current_role');
+    return (saved as UserRole) || 'admin';
+  });
   
   // Landing page active state
-  const [showLanding, setShowLanding] = useState(true);
+  const [showLanding, setShowLanding] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sae_show_landing');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   // Persistent active tabs for each role, allowing persistent selection between role switches!
-  const [adminTab, setAdminTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>('metrics');
-  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'agenda' | 'crm'>('reception');
-  const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>('tasks');
-  const [warehouseTab, setWarehouseTab] = useState<'catalog' | 'requisitions' | 'purchases'>('catalog');
-  const [clientTab, setClientTab] = useState<'tracking' | 'budget' | 'alerts'>('tracking');
+  const [adminTab, setAdminTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>(() => {
+    return (localStorage.getItem('sae_admin_tab') as any) || 'metrics';
+  });
+  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'agenda' | 'crm'>(() => {
+    return (localStorage.getItem('sae_advisor_tab') as any) || 'reception';
+  });
+  const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>(() => {
+    return (localStorage.getItem('sae_mechanic_tab') as any) || 'tasks';
+  });
+  const [warehouseTab, setWarehouseTab] = useState<'catalog' | 'requisitions' | 'purchases'>(() => {
+    return (localStorage.getItem('sae_warehouse_tab') as any) || 'catalog';
+  });
+  const [clientTab, setClientTab] = useState<'tracking' | 'budget' | 'alerts'>(() => {
+    return (localStorage.getItem('sae_client_tab') as any) || 'tracking';
+  });
+
+  // Keep state updated in localStorage
+  useEffect(() => {
+    localStorage.setItem('sae_current_role', currentRole);
+  }, [currentRole]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_show_landing', String(showLanding));
+  }, [showLanding]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_admin_tab', adminTab);
+  }, [adminTab]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_advisor_tab', advisorTab);
+  }, [advisorTab]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_mechanic_tab', mechanicTab);
+  }, [mechanicTab]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_warehouse_tab', warehouseTab);
+  }, [warehouseTab]);
+
+  useEffect(() => {
+    localStorage.setItem('sae_client_tab', clientTab);
+  }, [clientTab]);
 
   // Define tab navigation details for each role
   const getRoleTabs = () => {
