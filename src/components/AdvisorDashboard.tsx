@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
   Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck,
-  Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail
+  Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail,
+  HelpCircle
 } from 'lucide-react';
 import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
 import { 
@@ -2152,29 +2153,34 @@ export default function AdvisorDashboard({
                         setTimeout(() => setCopiedStatus('idle'), 3000);
                       }
                     }}
-                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                      copiedStatus === 'success' 
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                        : copiedStatus === 'copying'
-                        ? 'bg-slate-100 border-slate-200 text-slate-400 animate-pulse'
-                        : copiedStatus === 'error'
-                        ? 'bg-rose-50 border-rose-300 text-rose-700'
-                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm'
+                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm ${
+                      copiedStatus === 'idle' 
+                        ? 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700' 
+                        : 'text-white'
                     }`}
+                    style={
+                      copiedStatus === 'success'
+                        ? { backgroundColor: '#065f46', borderColor: '#059669', color: '#ffffff' }
+                        : copiedStatus === 'copying'
+                        ? { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#cbd5e1' }
+                        : copiedStatus === 'error'
+                        ? { backgroundColor: '#991b1b', borderColor: '#dc2626', color: '#ffffff' }
+                        : {}
+                    }
                   >
                     {copiedStatus === 'success' ? (
                       <>
-                        <Check size={14} className="text-emerald-500" />
-                        <span>¡Copiada en Portapapeles!</span>
+                        <Check size={14} style={{ color: '#10B981' }} />
+                        <span style={{ color: '#ffffff' }}>¡Copiada!</span>
                       </>
                     ) : copiedStatus === 'copying' ? (
-                      <span>Generando...</span>
+                      <span style={{ color: '#cbd5e1' }}>Generando...</span>
                     ) : copiedStatus === 'error' ? (
-                      <span>Error al copiar</span>
+                      <span style={{ color: '#ffffff' }}>Error al copiar</span>
                     ) : (
                       <>
                         <Copy size={14} />
-                        <span>Copiar Imagen a Portapapeles</span>
+                        <span>Copiar Imagen</span>
                       </>
                     )}
                   </button>
@@ -2214,25 +2220,30 @@ export default function AdvisorDashboard({
                         setTimeout(() => setSharingStatus('idle'), 4000);
                       }
                     }}
-                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                      sharingStatus === 'success'
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                        : sharingStatus === 'sharing'
-                        ? 'bg-slate-100 border-slate-200 text-slate-400 animate-pulse'
-                        : sharingStatus === 'unsupported'
-                        ? 'bg-amber-50 border-amber-300 text-amber-700'
-                        : 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700 shadow-sm'
+                    className={`py-2.5 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm ${
+                      sharingStatus === 'idle'
+                        ? 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                        : 'text-white'
                     }`}
+                    style={
+                      sharingStatus === 'success'
+                        ? { backgroundColor: '#065f46', borderColor: '#059669', color: '#ffffff' }
+                        : sharingStatus === 'sharing'
+                        ? { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)', color: '#cbd5e1' }
+                        : sharingStatus === 'unsupported'
+                        ? { backgroundColor: '#78350f', borderColor: '#b45309', color: '#ffffff' }
+                        : {}
+                    }
                   >
                     {sharingStatus === 'success' ? (
                       <>
-                        <Check size={14} className="text-emerald-500" />
-                        <span>¡Compartido!</span>
+                        <Check size={14} style={{ color: '#10B981' }} />
+                        <span style={{ color: '#ffffff' }}>¡Compartido!</span>
                       </>
                     ) : sharingStatus === 'sharing' ? (
-                      <span>Generando...</span>
+                      <span style={{ color: '#cbd5e1' }}>Generando...</span>
                     ) : sharingStatus === 'unsupported' ? (
-                      <span>Soporte Móvil Inactivo</span>
+                      <span style={{ color: '#ffffff' }}>Soporte Móvil Inactivo</span>
                     ) : (
                       <>
                         <Share2 size={14} />
@@ -2277,6 +2288,32 @@ export default function AdvisorDashboard({
                       </p>
                     </div>
                   </div>
+
+                  {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
+                  <div className="bg-white/75 border border-emerald-100 rounded-xl p-3 space-y-2 text-xs text-slate-700 shadow-xs">
+                    <p className="font-black text-amber-800 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                      Nota Importante de WhatsApp
+                    </p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
+                    </p>
+                    <div className="pt-1.5 border-t border-emerald-100/50 space-y-2 text-[11px]">
+                      <div className="flex items-start gap-2">
+                        <span className="bg-emerald-100 text-emerald-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div>
+                          <strong className="text-slate-900">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-emerald-700">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <span className="bg-emerald-100 text-emerald-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div>
+                          <strong className="text-slate-900">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   
                   <button
                     type="button"
@@ -2303,6 +2340,33 @@ export default function AdvisorDashboard({
                       </p>
                     </div>
                   </div>
+
+                  {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
+                  <div className="bg-white/75 border border-amber-100 rounded-xl p-3 space-y-2 text-xs text-slate-700 shadow-xs">
+                    <p className="font-black text-amber-850 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                      Nota Importante de WhatsApp
+                    </p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
+                    </p>
+                    <div className="pt-1.5 border-t border-amber-100/50 space-y-2 text-[11px]">
+                      <div className="flex items-start gap-2">
+                        <span className="bg-amber-100 text-amber-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div>
+                          <strong className="text-slate-900">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-slate-700">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <span className="bg-amber-100 text-amber-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div>
+                          <strong className="text-slate-900">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => {
