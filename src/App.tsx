@@ -101,7 +101,9 @@ export default function App() {
     return (localStorage.getItem('sae_admin_tab') as any) || 'metrics';
   });
   const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'salidas' | 'agenda' | 'crm'>(() => {
-    return (localStorage.getItem('sae_advisor_tab') as any) || 'reception';
+    const saved = localStorage.getItem('sae_advisor_tab');
+    if (saved === 'agenda' || saved === 'crm') return 'reception';
+    return (saved as any) || 'reception';
   });
   const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>(() => {
     return (localStorage.getItem('sae_mechanic_tab') as any) || 'tasks';
@@ -158,8 +160,6 @@ export default function App() {
           { id: 'quotes', label: 'Presupuestos', icon: FileText },
           { id: 'ordenes_reparacion', label: 'Órdenes de Reparación', icon: ClipboardList },
           { id: 'salidas', label: 'Salidas', icon: LogOut },
-          { id: 'agenda', label: 'Agenda', icon: Calendar },
-          { id: 'crm', label: 'CRM', icon: History },
         ];
       case 'mechanic':
         return [

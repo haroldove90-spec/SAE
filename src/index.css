@@ -6,7 +6,6 @@
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* Custom Color Palette aligned with user request */
   --color-slate-50: rgba(255, 255, 255, 0.02);
   --color-slate-100: #010101;
   --color-slate-200: rgba(255, 255, 255, 0.08);
@@ -19,7 +18,7 @@
   --color-slate-900: #010101;
 }
 
-/* Base Body Styles - Immersive `#010101` background with a subtle gold ambient radial glow at the top */
+/* Base Body Styles - Immersive `#010101` background with gold radial glow */
 html, body {
   margin: 0;
   padding: 0;
@@ -31,96 +30,154 @@ html, body {
 body {
   background-color: #010101 !important;
   background-image: radial-gradient(circle at 50% 0%, #1e160a 0%, #010101 75%) !important;
-  color: #FFFFFF !important;
+  color: #FFFFFF;
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
 }
 
-/* Master background override for slate-100 container */
-.bg-slate-100 {
-  background-color: transparent !important;
-}
-
-/* Premium Semi-Transparent Glass Surfaces (Panels/Cards) with thin borders */
+/* 🎨 GLASS PANELS & CARDS (DARK THEME) */
 .bg-white {
-  background-color: rgba(255, 255, 255, 0.03) !important;
+  background-color: rgba(18, 18, 22, 0.92) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7) !important;
+}
+
+.bg-slate-50, .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6) !important;
 }
 
-.bg-slate-50 {
-  background-color: rgba(255, 255, 255, 0.01) !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Global Text Remapping for White Text requested by user */
-.text-slate-800, 
-.text-slate-900, 
-.text-slate-700, 
-.text-slate-600,
-p, h1, h2, h3, h4, h5, h6, span, label, th, td, option {
+.bg-slate-200 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
   color: #FFFFFF !important;
 }
 
-/* Sub-text or muted text styles */
-.text-slate-500, 
-.text-slate-400 {
-  color: #CBD5E1 !important; /* Slightly lighter white/gray for hierarchy */
+/* Light / Amber Banners Overrides -> Turn into sleek Dark Gold Glass boxes */
+.bg-amber-50, 
+.bg-amber-50\/70,
+.bg-amber-100,
+.bg-orange-50, 
+.bg-yellow-50,
+.bg-gradient-to-r.from-amber-50,
+.from-amber-50 {
+  background-image: none !important;
+  background-color: rgba(30, 22, 12, 0.9) !important;
+  border-color: rgba(141, 106, 40, 0.45) !important;
 }
 
+.bg-indigo-50, .bg-blue-50 {
+  background-image: none !important;
+  background-color: rgba(20, 25, 45, 0.9) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+.bg-emerald-50, .bg-green-50 {
+  background-image: none !important;
+  background-color: rgba(12, 32, 22, 0.9) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+.bg-red-50, .bg-pink-50 {
+  background-image: none !important;
+  background-color: rgba(35, 15, 18, 0.9) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* 🔤 HIGH CONTRAST TEXT UTILITIES */
+.text-slate-900,
+.text-slate-800,
+.text-slate-700,
+.text-slate-950 {
+  color: #FFFFFF !important;
+}
+
+.text-slate-600,
+.text-slate-500 {
+  color: #CBD5E1 !important; /* Silver gray for secondary labels/descriptions */
+}
+
+.text-slate-400,
 .text-slate-300 {
   color: #94A3B8 !important;
 }
 
-/* 🏆 GOLD ACCENT (#8D6A28) MASTER CLASS OVERRIDES */
-/* This converts all standard UI action colors to the requested gold theme */
+/* Gold Accents - Vibrant Legible Gold */
+.text-amber-900,
+.text-amber-800,
+.text-amber-700,
+.text-amber-600,
+.text-amber-500,
+.text-yellow-600,
+.text-yellow-500 {
+  color: #F8B232 !important;
+}
+
+/* Emerald Accents */
+.text-emerald-900,
+.text-emerald-800,
+.text-emerald-700,
+.text-emerald-600 {
+  color: #34D399 !important;
+}
+
+/* Indigo Accents */
+.text-indigo-900,
+.text-indigo-800,
+.text-indigo-700,
+.text-indigo-600 {
+  color: #818CF8 !important;
+}
+
+/* Red Accents */
+.text-red-900,
+.text-red-800,
+.text-red-700,
+.text-red-600 {
+  color: #F87171 !important;
+}
+
+/* 🏆 GOLD BUTTONS OVERRIDES */
 .bg-amber-600, 
 .bg-amber-500,
 .bg-indigo-600,
 .bg-blue-600,
 .bg-emerald-600,
 .bg-emerald-500,
-button[type="submit"],
-.bg-slate-800 {
+button[type="submit"] {
   background-color: #8D6A28 !important;
   color: #FFFFFF !important;
   border-color: #8D6A28 !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 0.2s ease !important;
 }
 
-/* Hover effects for gold buttons */
 .hover\:bg-amber-700:hover, 
 .hover\:bg-amber-600:hover,
 .hover\:bg-indigo-700:hover,
 .hover\:bg-blue-700:hover,
 .hover\:bg-emerald-700:hover,
-.hover\:bg-slate-900:hover,
 button:hover {
-  background-color: #B48835 !important; /* Lighter gold for premium hover */
+  background-color: #B48835 !important;
   color: #FFFFFF !important;
   box-shadow: 0 0 15px rgba(141, 106, 40, 0.4) !important;
 }
 
-/* Muted or outline buttons */
-.border-amber-500, 
-.border-amber-600,
-.border-indigo-200,
-.border-slate-200 {
-  border-color: rgba(141, 106, 40, 0.4) !important;
+/* Light / Secondary Buttons (e.g. Cargar Cliente, Cancelar Edición) */
+.bg-white.text-slate-700,
+.bg-slate-100.text-slate-600,
+.bg-slate-200.text-slate-800 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
 
-/* Gold Text Accent */
-.text-amber-600, 
-.text-amber-700, 
-.text-amber-800, 
-.text-amber-900,
-.text-indigo-700,
-.text-emerald-600,
-.text-indigo-600,
-a {
-  color: #F8B232 !important; /* A shiny legible gold for text */
+.bg-white.text-slate-700:hover,
+.bg-slate-100.text-slate-600:hover,
+.bg-slate-200.text-slate-800:hover {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  color: #FFFFFF !important;
 }
 
 /* Borders Global Alignment */
@@ -128,30 +185,12 @@ a {
 .border-slate-100, 
 .border-slate-200, 
 .border-slate-300, 
-.border-slate-200\/50, 
-.border-dashed {
-  border-color: rgba(255, 255, 255, 0.08) !important;
+.border-amber-200,
+.border-amber-300 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Table Enhancements */
-thead tr {
-  background-color: rgba(255, 255, 255, 0.02) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-tr {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
-}
-
-tr:hover {
-  background-color: rgba(255, 255, 255, 0.01) !important;
-}
-
-td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
-}
-
-/* Dark Mode Inputs, Dropdowns, and Textareas */
+/* 📥 FORM INPUTS, SELECTS, TEXTAREAS */
 input[type="text"], 
 input[type="number"], 
 input[type="tel"], 
@@ -159,55 +198,51 @@ input[type="email"],
 input[type="date"], 
 select, 
 textarea {
-  background-color: rgba(0, 0, 0, 0.6) !important;
+  background-color: #0A0A0E !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   border-radius: 8px !important;
   transition: all 0.2s ease !important;
 }
 
-input[type="text"]:focus, 
-input[type="number"]:focus, 
-input[type="tel"]:focus, 
-input[type="email"]:focus, 
-input[type="date"]:focus, 
-select:focus, 
-textarea:focus {
-  border-color: #8D6A28 !important;
-  box-shadow: 0 0 0 2px rgba(141, 106, 40, 0.3) !important;
+input:focus, select:focus, textarea:focus {
+  border-color: #F8B232 !important;
+  box-shadow: 0 0 0 2px rgba(248, 178, 50, 0.25) !important;
   outline: none !important;
 }
 
-/* Option element styling inside dark select dropdowns */
-option {
-  background-color: #010101 !important;
+select option {
+  background-color: #0A0A0E !important;
   color: #FFFFFF !important;
 }
 
-/* Glowing Cybernetic Role Status Headers & Banners - Aligned to dark theme */
-.bg-amber-50, 
-.bg-blue-50, 
-.bg-orange-50, 
-.bg-purple-50, 
-.bg-emerald-50,
-.bg-yellow-50,
-.bg-pink-50,
-.bg-red-50,
-.bg-green-50 {
-  background-color: rgba(141, 106, 40, 0.06) !important;
-  border-color: rgba(141, 106, 40, 0.25) !important;
+input:disabled, select:disabled, textarea:disabled {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: #64748B !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
-/* Badges and Highlights */
-.bg-amber-100,
-.bg-red-100,
-.bg-emerald-100,
-.bg-indigo-100,
-.bg-blue-100,
-.bg-orange-100 {
-  background-color: rgba(141, 106, 40, 0.2) !important;
-  border: 1px solid rgba(141, 106, 40, 0.3) !important;
+/* Table Enhancements */
+thead tr {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+th {
+  color: #F8B232 !important;
+}
+
+tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+tr:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+td {
   color: #FFFFFF !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 /* Custom scrollbars */
@@ -221,12 +256,12 @@ option {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(141, 106, 40, 0.4);
+  background: rgba(141, 106, 40, 0.5);
 }
 
 .animate-pulse-slow {
@@ -234,12 +269,8 @@ option {
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: .7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: .7; }
 }
 
 /* --- SAE SERVICE ORDER PDF GENERATION RESET --- */
@@ -280,4 +311,3 @@ option {
 #sae-pdf-render-root .sae-white-text {
   color: #FFFFFF !important;
 }
-
