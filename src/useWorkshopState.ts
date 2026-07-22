@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, OrderStatus, BudgetLineItem, TimeLog, Presupuesto, OrdenReparacion } from './types';
+import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, OrderStatus, BudgetLineItem, TimeLog, Presupuesto, OrdenReparacion, NotaSalida } from './types';
 import { 
   INITIAL_CLIENTS, 
   INITIAL_VEHICLES, 
@@ -12,7 +12,8 @@ import {
   INITIAL_TRANSACTIONS, 
   INITIAL_SETTINGS,
   INITIAL_PRESUPUESTOS,
-  INITIAL_ORDENES_REPARACION
+  INITIAL_ORDENES_REPARACION,
+  INITIAL_NOTAS_SALIDA
 } from './mockData';
 import { supabase } from './lib/supabase';
 
@@ -36,6 +37,7 @@ export function useWorkshopState() {
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [ordenesReparacion, setOrdenesReparacion] = useState<OrdenReparacion[]>([]);
+  const [notasSalida, setNotasSalida] = useState<NotaSalida[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<WorkshopSettings>(INITIAL_SETTINGS);
   const [loaded, setLoaded] = useState(false);
@@ -58,6 +60,7 @@ export function useWorkshopState() {
       const localOrders = localStorage.getItem('wt_orders');
       const localPresupuestos = localStorage.getItem('wt_presupuestos');
       const localOrdenesReparacion = localStorage.getItem('wt_ordenes_reparacion');
+      const localNotasSalida = localStorage.getItem('wt_notas_salida');
       const localTransactions = localStorage.getItem('wt_transactions');
       const localSettings = localStorage.getItem('wt_settings');
 
@@ -71,6 +74,7 @@ export function useWorkshopState() {
       setOrders(localOrders ? sortNewestFirst(JSON.parse(localOrders)) : sortNewestFirst(INITIAL_ORDERS));
       setPresupuestos(localPresupuestos ? sortNewestFirst(JSON.parse(localPresupuestos)) : sortNewestFirst(INITIAL_PRESUPUESTOS));
       setOrdenesReparacion(localOrdenesReparacion ? sortNewestFirst(JSON.parse(localOrdenesReparacion)) : sortNewestFirst(INITIAL_ORDENES_REPARACION));
+      setNotasSalida(localNotasSalida ? sortNewestFirst(JSON.parse(localNotasSalida)) : sortNewestFirst(INITIAL_NOTAS_SALIDA));
       setTransactions(localTransactions ? sortNewestFirst(JSON.parse(localTransactions)) : sortNewestFirst(INITIAL_TRANSACTIONS));
       
       let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
@@ -319,6 +323,11 @@ export function useWorkshopState() {
     if (!loaded) return;
     localStorage.setItem('wt_ordenes_reparacion', JSON.stringify(ordenesReparacion));
   }, [ordenesReparacion, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('wt_notas_salida', JSON.stringify(notasSalida));
+  }, [notasSalida, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -891,6 +900,24 @@ export function useWorkshopState() {
     return newOrder;
   };
 
+  const addNotaSalida = (nota: Omit<NotaSalida, 'id' | 'createdAt'>) => {
+    const newNota: NotaSalida = {
+      ...nota,
+      id: `sal-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setNotasSalida(prev => [newNota, ...prev]);
+    return newNota;
+  };
+
+  const updateNotaSalida = (nota: NotaSalida) => {
+    setNotasSalida(prev => prev.map(n => n.id === nota.id ? nota : n));
+  };
+
+  const deleteNotaSalida = (id: string) => {
+    setNotasSalida(prev => prev.filter(n => n.id !== id));
+  };
+
   // Reset database to initial values
   const resetDatabase = () => {
     setClients(INITIAL_CLIENTS);
@@ -903,6 +930,7 @@ export function useWorkshopState() {
     setOrders(INITIAL_ORDERS);
     setPresupuestos(INITIAL_PRESUPUESTOS);
     setOrdenesReparacion(INITIAL_ORDENES_REPARACION);
+    setNotasSalida(INITIAL_NOTAS_SALIDA);
     setTransactions(INITIAL_TRANSACTIONS);
     setSettings(INITIAL_SETTINGS);
     
@@ -916,6 +944,7 @@ export function useWorkshopState() {
     localStorage.setItem('wt_orders', JSON.stringify(INITIAL_ORDERS));
     localStorage.setItem('wt_presupuestos', JSON.stringify(INITIAL_PRESUPUESTOS));
     localStorage.setItem('wt_ordenes_reparacion', JSON.stringify(INITIAL_ORDENES_REPARACION));
+    localStorage.setItem('wt_notas_salida', JSON.stringify(INITIAL_NOTAS_SALIDA));
     localStorage.setItem('wt_transactions', JSON.stringify(INITIAL_TRANSACTIONS));
     localStorage.setItem('wt_settings', JSON.stringify(INITIAL_SETTINGS));
   };
@@ -931,6 +960,7 @@ export function useWorkshopState() {
     orders,
     presupuestos,
     ordenesReparacion,
+    notasSalida,
     transactions,
     settings,
     setSettings,
@@ -974,6 +1004,9 @@ export function useWorkshopState() {
     addOrdenReparacion,
     updateOrdenReparacion,
     deleteOrdenReparacion,
+    addNotaSalida,
+    updateNotaSalida,
+    deleteNotaSalida,
     convertPresupuestoToOrder,
     resetDatabase
   };

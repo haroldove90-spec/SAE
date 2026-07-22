@@ -36,6 +36,7 @@ export default function App() {
     setSettings,
     presupuestos,
     ordenesReparacion,
+    notasSalida,
     
     // Supabase Sync State & Actions
     isSyncing,
@@ -76,6 +77,9 @@ export default function App() {
     addOrdenReparacion,
     updateOrdenReparacion,
     deleteOrdenReparacion,
+    addNotaSalida,
+    updateNotaSalida,
+    deleteNotaSalida,
     convertPresupuestoToOrder,
     resetDatabase
   } = useWorkshopState();
@@ -96,7 +100,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>(() => {
     return (localStorage.getItem('sae_admin_tab') as any) || 'metrics';
   });
-  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm'>(() => {
+  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'salidas' | 'agenda' | 'crm'>(() => {
     return (localStorage.getItem('sae_advisor_tab') as any) || 'reception';
   });
   const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>(() => {
@@ -153,6 +157,7 @@ export default function App() {
           { id: 'reception', label: 'Recepción', icon: Car },
           { id: 'quotes', label: 'Presupuestos', icon: FileText },
           { id: 'ordenes_reparacion', label: 'Órdenes de Reparación', icon: ClipboardList },
+          { id: 'salidas', label: 'Salidas', icon: LogOut },
           { id: 'agenda', label: 'Agenda', icon: Calendar },
           { id: 'crm', label: 'CRM', icon: History },
         ];
@@ -528,6 +533,7 @@ export default function App() {
                     orders={orders}
                     presupuestos={presupuestos}
                     ordenesReparacion={ordenesReparacion}
+                    notasSalida={notasSalida}
                     addClient={addClient}
                     updateClient={updateClient}
                     addVehicle={addVehicle}
@@ -544,6 +550,9 @@ export default function App() {
                     addOrdenReparacion={addOrdenReparacion}
                     updateOrdenReparacion={updateOrdenReparacion}
                     deleteOrdenReparacion={deleteOrdenReparacion}
+                    addNotaSalida={addNotaSalida}
+                    updateNotaSalida={updateNotaSalida}
+                    deleteNotaSalida={deleteNotaSalida}
                     convertPresupuestoToOrder={convertPresupuestoToOrder}
                     activeTab={advisorTab}
                     setActiveTab={setAdvisorTab}

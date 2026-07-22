@@ -3,9 +3,9 @@ import {
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
   Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck, User,
   Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail,
-  HelpCircle, Printer, RefreshCw, Edit2, Eye, DollarSign, ClipboardList
+  HelpCircle, Printer, RefreshCw, Edit2, Eye, DollarSign, ClipboardList, LogOut
 } from 'lucide-react';
-import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist, Presupuesto, PresupuestoItem, OrdenReparacion, OrdenReparacionItem } from '../types';
+import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist, Presupuesto, PresupuestoItem, OrdenReparacion, OrdenReparacionItem, NotaSalida, NotaSalidaItem } from '../types';
 import { 
   generateSaePdf, 
   generateSaeImageBlob, 
@@ -17,7 +17,10 @@ import {
   shareSaePresupuestoMobile,
   getSaeOrdenDeReparacionHtml,
   downloadSaeOrdenDeReparacionPdf,
-  shareSaeOrdenDeReparacionMobile
+  shareSaeOrdenDeReparacionMobile,
+  getSaeNotaSalidaHtml,
+  downloadSaeNotaSalidaPdf,
+  shareSaeNotaSalidaMobile
 } from '../utils/saePdf';
 import { SignaturePad } from './SignaturePad';
 
@@ -29,6 +32,7 @@ interface AdvisorDashboardProps {
   orders: ServiceOrder[];
   presupuestos?: Presupuesto[];
   ordenesReparacion?: OrdenReparacion[];
+  notasSalida?: NotaSalida[];
   addClient: (c: Omit<Client, 'id' | 'creditBalance'>) => Client;
   updateClient: (c: Client) => void;
   addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle;
@@ -45,9 +49,12 @@ interface AdvisorDashboardProps {
   addOrdenReparacion?: (ord: Omit<OrdenReparacion, 'id' | 'createdAt'>) => OrdenReparacion;
   updateOrdenReparacion?: (ord: OrdenReparacion) => void;
   deleteOrdenReparacion?: (id: string) => void;
+  addNotaSalida?: (nota: Omit<NotaSalida, 'id' | 'createdAt'>) => NotaSalida;
+  updateNotaSalida?: (nota: NotaSalida) => void;
+  deleteNotaSalida?: (id: string) => void;
   convertPresupuestoToOrder?: (id: string) => ServiceOrder | null;
-  activeTab?: 'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm';
-  setActiveTab?: (tab: 'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm') => void;
+  activeTab?: 'reception' | 'quotes' | 'ordenes_reparacion' | 'salidas' | 'agenda' | 'crm';
+  setActiveTab?: (tab: 'reception' | 'quotes' | 'ordenes_reparacion' | 'salidas' | 'agenda' | 'crm') => void;
 }
 
 export default function AdvisorDashboard({
@@ -58,6 +65,7 @@ export default function AdvisorDashboard({
   orders,
   presupuestos = [],
   ordenesReparacion = [],
+  notasSalida = [],
   addClient,
   updateClient,
   addVehicle,
@@ -74,11 +82,14 @@ export default function AdvisorDashboard({
   addOrdenReparacion,
   updateOrdenReparacion,
   deleteOrdenReparacion,
+  addNotaSalida,
+  updateNotaSalida,
+  deleteNotaSalida,
   convertPresupuestoToOrder,
   activeTab: controlledActiveTab,
   setActiveTab: controlledSetActiveTab
 }: AdvisorDashboardProps) {
-  const [localActiveTab, setLocalActiveTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm'>('reception');
+  const [localActiveTab, setLocalActiveTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'salidas' | 'agenda' | 'crm'>('reception');
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
   const setActiveTab = controlledSetActiveTab !== undefined ? controlledSetActiveTab : setLocalActiveTab;
 
@@ -734,6 +745,274 @@ export default function AdvisorDashboard({
     const encoded = encodeURIComponent(text);
     const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
     window.open(url, '_blank');
+  };
+
+  // State for Salidas Module
+  const [salidaSubTab, setSalidaSubTab] = useState<'formulario' | 'historial' | 'presupuestos'>('formulario');
+  const [editingSalidaId, setEditingSalidaId] = useState<string | null>(null);
+
+  const [salNumero, setSalNumero] = useState(() => (187 + (notasSalida?.length || 0)).toString());
+  const [salFecha, setSalFecha] = useState(() => '16/07/2026');
+  const [salAsesor, setSalAsesor] = useState('Alberto Flores Hdz.');
+
+  const [salClienteNombre, setSalClienteNombre] = useState('Congregación de la misión');
+  const [salClienteCalle, setSalClienteCalle] = useState('Av.San Fernando #154');
+  const [salClienteCpColonia, setSalClienteCpColonia] = useState('14000 Tlalpan Centro');
+  const [salClienteAlcaldia, setSalClienteAlcaldia] = useState('Tlalpan');
+  const [salClienteTelefono, setSalClienteTelefono] = useState('73 5266 8332');
+
+  const [salMarcaMotor, setSalMarcaMotor] = useState('FORD-RANGER / 2.3L');
+  const [salModeloColor, setSalModeloColor] = useState('2012 / BLANCO');
+  const [salMatriculaVin, setSalMatriculaVin] = useState('865-XXJ / 8AFER5AD8C6453240');
+  const [salKilometros, setSalKilometros] = useState<number>(161282);
+
+  const [salFormaPago, setSalFormaPago] = useState('CONTADO');
+  const [salGarantia, setSalGarantia] = useState('30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO');
+  const [salOrdenServicioNumero, setSalOrdenServicioNumero] = useState('378A');
+
+  const [salItems, setSalItems] = useState<NotaSalidaItem[]>([
+    { id: 'nsi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1, importeUnitario: 3850.00, total: 3850.00 },
+    { id: 'nsi-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1, importeUnitario: 350.00, total: 350.00 },
+    { id: 'nsi-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1, importeUnitario: 1700.00, total: 1700.00 },
+    { id: 'nsi-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+    { id: 'nsi-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2, importeUnitario: 1350.00, total: 2700.00 },
+    { id: 'nsi-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2, importeUnitario: 975.00, total: 1950.00 },
+    { id: 'nsi-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2, importeUnitario: 713.00, total: 1426.00 },
+    { id: 'nsi-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2, importeUnitario: 580.00, total: 1160.00 },
+    { id: 'nsi-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1, importeUnitario: 850.00, total: 850.00 },
+    { id: 'nsi-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4, importeUnitario: 240.00, total: 960.00 },
+    { id: 'nsi-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 3800.00, total: 3800.00 },
+    { id: 'nsi-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1, importeUnitario: 950.00, total: 950.00 },
+    { id: 'nsi-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2, importeUnitario: 280.00, total: 560.00 },
+    { id: 'nsi-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 450.00, total: 450.00 },
+    { id: 'nsi-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+    { id: 'nsi-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4, importeUnitario: 298.00, total: 1192.00 },
+    { id: 'nsi-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1, importeUnitario: 6500.00, total: 6500.00 },
+    { id: 'nsi-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1, importeUnitario: 3975.00, total: 3975.00 }
+  ]);
+
+  const [salSearchQuery, setSalSearchQuery] = useState('');
+  const [salSuccessMessage, setSalSuccessMessage] = useState<string | null>(null);
+
+  const [selectedClientForSalida, setSelectedClientForSalida] = useState<Client | null>(null);
+  const [selectedVehicleForSalida, setSelectedVehicleForSalida] = useState<Vehicle | null>(null);
+
+  const selectClientForSalida = (client: Client) => {
+    setSelectedClientForSalida(client);
+    setSalClienteNombre(client.name);
+    setSalClienteCalle(client.calle || client.address || '');
+    setSalClienteCpColonia(`${client.cp || ''} ${client.colonia || ''}`.trim());
+    setSalClienteAlcaldia(client.alcaldia || '');
+    setSalClienteTelefono(client.phone || client.telFijo || '');
+
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    if (clientVehicles.length > 0) {
+      selectVehicleForSalida(clientVehicles[0]);
+    } else {
+      setSelectedVehicleForSalida(null);
+    }
+  };
+
+  const selectVehicleForSalida = (v: Vehicle) => {
+    setSelectedVehicleForSalida(v);
+    setSalMarcaMotor(`${v.brand}-${v.model} / ${v.motor || '2.3L'}`);
+    setSalModeloColor(`${v.year} / ${(v.color || 'Blanco').toUpperCase()}`);
+    setSalMatriculaVin(`${v.plate || 'SIN-PLACA'} / ${v.vin || v.serie || 'VIN-000'}`);
+    setSalKilometros(v.mileage || 0);
+  };
+
+  const handleAddSalidaItem = () => {
+    const newItem: NotaSalidaItem = {
+      id: `nsi-${Date.now()}`,
+      codigo: '',
+      descripcion: '',
+      cantidad: 1,
+      importeUnitario: 0,
+      total: 0
+    };
+    setSalItems(prev => [...prev, newItem]);
+  };
+
+  const handleUpdateSalidaItem = (id: string, field: keyof NotaSalidaItem, val: any) => {
+    setSalItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: val };
+        if (field === 'cantidad' || field === 'importeUnitario') {
+          const qty = field === 'cantidad' ? (parseFloat(val) || 0) : item.cantidad;
+          const price = field === 'importeUnitario' ? (parseFloat(val) || 0) : item.importeUnitario;
+          updated.total = qty * price;
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
+  const handleRemoveSalidaItem = (id: string) => {
+    setSalItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const salTotalCalculated = salItems.reduce((sum, item) => sum + (item.total || 0), 0);
+
+  const handleLoadSampleSalidaPaperData = () => {
+    setSalNumero('187');
+    setSalFecha('16/07/2026');
+    setSalAsesor('Alberto Flores Hdz.');
+    setSalClienteNombre('Congregación de la misión');
+    setSalClienteCalle('Av.San Fernando #154');
+    setSalClienteCpColonia('14000 Tlalpan Centro');
+    setSalClienteAlcaldia('Tlalpan');
+    setSalClienteTelefono('73 5266 8332');
+    setSalMarcaMotor('FORD-RANGER / 2.3L');
+    setSalModeloColor('2012 / BLANCO');
+    setSalMatriculaVin('865-XXJ / 8AFER5AD8C6453240');
+    setSalKilometros(161282);
+    setSalFormaPago('CONTADO');
+    setSalGarantia('30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO');
+    setSalOrdenServicioNumero('378A');
+    setSalItems([
+      { id: 'nsi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1, importeUnitario: 3850.00, total: 3850.00 },
+      { id: 'nsi-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1, importeUnitario: 350.00, total: 350.00 },
+      { id: 'nsi-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1, importeUnitario: 1700.00, total: 1700.00 },
+      { id: 'nsi-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'nsi-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2, importeUnitario: 1350.00, total: 2700.00 },
+      { id: 'nsi-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2, importeUnitario: 975.00, total: 1950.00 },
+      { id: 'nsi-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2, importeUnitario: 713.00, total: 1426.00 },
+      { id: 'nsi-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2, importeUnitario: 580.00, total: 1160.00 },
+      { id: 'nsi-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1, importeUnitario: 850.00, total: 850.00 },
+      { id: 'nsi-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4, importeUnitario: 240.00, total: 960.00 },
+      { id: 'nsi-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 3800.00, total: 3800.00 },
+      { id: 'nsi-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1, importeUnitario: 950.00, total: 950.00 },
+      { id: 'nsi-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2, importeUnitario: 280.00, total: 560.00 },
+      { id: 'nsi-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 450.00, total: 450.00 },
+      { id: 'nsi-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'nsi-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4, importeUnitario: 298.00, total: 1192.00 },
+      { id: 'nsi-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1, importeUnitario: 6500.00, total: 6500.00 },
+      { id: 'nsi-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1, importeUnitario: 3975.00, total: 3975.00 }
+    ]);
+    setSalSuccessMessage('📄 Ejemplo Nota de Salida #187 cargado desde la hoja oficial SAE');
+    setTimeout(() => setSalSuccessMessage(null), 3000);
+  };
+
+  const handleSaveNotaSalida = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!salClienteNombre.trim()) {
+      alert('Por favor ingresa el nombre del cliente');
+      return;
+    }
+
+    const payload: Omit<NotaSalida, 'id' | 'createdAt'> = {
+      numero: salNumero,
+      fecha: salFecha,
+      asesor: salAsesor,
+      clienteNombre: salClienteNombre,
+      clienteCalle: salClienteCalle,
+      clienteCpColonia: salClienteCpColonia,
+      clienteAlcaldia: salClienteAlcaldia,
+      clienteTelefono: salClienteTelefono,
+      marcaMotor: salMarcaMotor,
+      modeloColor: salModeloColor,
+      matriculaVin: salMatriculaVin,
+      kilometros: salKilometros,
+      formaPago: salFormaPago,
+      garantia: salGarantia,
+      ordenServicioNumero: salOrdenServicioNumero,
+      items: salItems,
+      total: salTotalCalculated,
+      clientId: selectedClientForSalida?.id,
+      vehicleId: selectedVehicleForSalida?.id,
+      status: 'Emitida' as const
+    };
+
+    if (editingSalidaId && updateNotaSalida) {
+      updateNotaSalida({
+        ...payload,
+        id: editingSalidaId,
+        createdAt: new Date().toISOString()
+      });
+      setSalSuccessMessage(`✅ Nota de Salida #${salNumero} actualizada exitosamente.`);
+    } else if (addNotaSalida) {
+      addNotaSalida(payload);
+      setSalSuccessMessage(`🎉 Nota de Salida #${salNumero} registrada correctamente en el historial.`);
+    }
+
+    setEditingSalidaId(null);
+    setTimeout(() => setSalSuccessMessage(null), 3000);
+  };
+
+  const handleEditSalidaFromList = (nota: NotaSalida) => {
+    setEditingSalidaId(nota.id);
+    setSalNumero(nota.numero);
+    setSalFecha(nota.fecha);
+    setSalAsesor(nota.asesor || 'Alberto Flores Hdz.');
+    setSalClienteNombre(nota.clienteNombre);
+    setSalClienteCalle(nota.clienteCalle);
+    setSalClienteCpColonia(nota.clienteCpColonia);
+    setSalClienteAlcaldia(nota.clienteAlcaldia);
+    setSalClienteTelefono(nota.clienteTelefono);
+    setSalMarcaMotor(nota.marcaMotor);
+    setSalModeloColor(nota.modeloColor);
+    setSalMatriculaVin(nota.matriculaVin);
+    setSalKilometros(nota.kilometros || 0);
+    setSalFormaPago(nota.formaPago || 'CONTADO');
+    setSalGarantia(nota.garantia || '30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO');
+    setSalOrdenServicioNumero(nota.ordenServicioNumero || '');
+    setSalItems(nota.items || []);
+    setSalidaSubTab('formulario');
+  };
+
+  const handleResetSalidaForm = () => {
+    setEditingSalidaId(null);
+    setSalNumero((187 + (notasSalida?.length || 0)).toString());
+    setSalFecha(new Date().toISOString().split('T')[0]);
+    setSalClienteNombre('');
+    setSalClienteCalle('');
+    setSalClienteCpColonia('');
+    setSalClienteAlcaldia('');
+    setSalClienteTelefono('');
+    setSalMarcaMotor('');
+    setSalModeloColor('');
+    setSalMatriculaVin('');
+    setSalKilometros(0);
+    setSalFormaPago('CONTADO');
+    setSalGarantia('30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO');
+    setSalOrdenServicioNumero('');
+    setSalItems([]);
+  };
+
+  const handleSendSalidaWhatsApp = (nota: NotaSalida) => {
+    const phone = nota.clienteTelefono.replace(/[^0-9]/g, '') || '5500000000';
+    const msg = `Hola *${nota.clienteNombre}*, te compartimos tu *Nota de Salida / Liquidación SAE* con el Folio #${nota.numero}.\nVehículo: ${nota.marcaMotor} (${nota.matriculaVin})\nTotal: $${nota.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN\nOrd. Serv: #${nota.ordenServicioNumero}\n¡Muchas gracias por tu confianza en Servicio Automotriz Especializado (SAE)! 🚗🏁`;
+    window.open(`https://api.whatsapp.com/send?phone=52${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleConvertPresupuestoToSalida = (pres: Presupuesto) => {
+    setSalNumero((187 + (notasSalida?.length || 0)).toString());
+    setSalFecha(new Date().toISOString().split('T')[0]);
+    setSalAsesor(pres.asesor || 'Alberto Flores Hdz.');
+    setSalClienteNombre(pres.clienteNombre);
+    setSalClienteCalle(pres.clienteCalle || '');
+    setSalClienteCpColonia(pres.clienteCpColonia || '');
+    setSalClienteAlcaldia(pres.clienteAlcaldia || '');
+    setSalClienteTelefono(pres.clienteTelefono || '');
+    setSalMarcaMotor(pres.marcaMotor || '');
+    setSalModeloColor(pres.modeloColor || '');
+    setSalMatriculaVin(pres.matriculaVin || '');
+    setSalKilometros(pres.kilometros || 0);
+    setSalFormaPago('CONTADO');
+    setSalGarantia('30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO');
+    setSalOrdenServicioNumero(pres.numero || '');
+    setSalItems(pres.items.map((i, idx) => ({
+      id: `nsi-conv-${idx + 1}`,
+      codigo: i.codigo || '',
+      descripcion: i.descripcion,
+      cantidad: i.cantidad,
+      importeUnitario: i.importeUnitario,
+      total: i.total
+    })));
+    setSalidaSubTab('formulario');
+    setSalSuccessMessage(`⚡ Presupuesto #${pres.numero} cargado en el formulario de Nota de Salida. Puedes revisar y guardar.`);
+    setTimeout(() => setSalSuccessMessage(null), 4000);
   };
 
   // Set default mechanic ID
@@ -3651,6 +3930,748 @@ export default function AdvisorDashboard({
                       <tr>
                         <td colSpan={7} className="p-8 text-center text-slate-400">
                           No hay órdenes de reparación registradas aún. Registra una nueva usando el formulario arriba.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MÓDULO OFICIAL SALIDAS / PRESUPUESTOS Y NOTAS DE LIQUIDACIÓN SAE */}
+      {activeTab === 'salidas' && (
+        <div className="space-y-6">
+          {/* BARRA DE NAVEGACIÓN SECUNDARIA / SUB-TABS */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSalidaSubTab('formulario')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  salidaSubTab === 'formulario'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Plus size={15} />
+                <span>Formulario Nota de Salida</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSalidaSubTab('historial')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  salidaSubTab === 'historial'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <History size={15} />
+                <span>Historial de Salidas ({notasSalida.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSalidaSubTab('presupuestos')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  salidaSubTab === 'presupuestos'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <FileText size={15} />
+                <span>Historial de Presupuestos ({presupuestos.length})</span>
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium hidden sm:block">
+              Módulo Oficial de Salidas y Liquidación SAE • Hoja de Salida
+            </div>
+          </div>
+
+          {/* BANNER DE MENSAJE DE ÉXITO */}
+          {salSuccessMessage && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
+              <Check size={18} className="text-emerald-600 shrink-0" />
+              <span>{salSuccessMessage}</span>
+            </div>
+          )}
+
+          {/* SUB-TAB 1: FORMULARIO DE REGISTRO / EDICIÓN NOTA DE SALIDA */}
+          {salidaSubTab === 'formulario' && (
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
+              {/* CABECERA CON ACCIONES RÁPIDAS Y CARGA DE MUESTRA */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <LogOut className="text-amber-600" size={20} />
+                    {editingSalidaId ? `Editando Nota de Salida #${salNumero}` : 'Registrar Nueva Nota de Salida / Liquidación'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Genera la Nota de Salida con datos del cliente, vehículo, liquidación de trabajos y garantía.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleSalidaPaperData}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Sparkles size={14} />
+                    <span>Ejemplo Muestra Hoja SAE (Salida 187)</span>
+                  </button>
+
+                  {editingSalidaId && (
+                    <button
+                      type="button"
+                      onClick={handleResetSalidaForm}
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                    >
+                      Cancelar Edición
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* FORMULARIO NOTA DE SALIDA */}
+              <form onSubmit={handleSaveNotaSalida} className="space-y-6">
+                {/* BUSCADOR Y SELECTOR INTERACTIVO DE CLIENTE REGISTRADO */}
+                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-600" />
+                      Buscar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
+                    </label>
+                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                      {clients.length} clientes en base de datos
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-600 font-bold mb-1">Cliente Registrado</label>
+                      <select
+                        value={selectedClientForSalida?.id || ''}
+                        onChange={(e) => {
+                          const found = clients.find(c => c.id === e.target.value);
+                          if (found) {
+                            selectClientForSalida(found);
+                          } else {
+                            setSelectedClientForSalida(null);
+                            setSelectedVehicleForSalida(null);
+                          }
+                        }}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="">-- Buscar o seleccionar cliente registrado --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-slate-600 font-bold mb-1">Vehículo del Cliente</label>
+                      <select
+                        value={selectedVehicleForSalida?.id || ''}
+                        onChange={(e) => {
+                          const found = vehicles.find(v => v.id === e.target.value);
+                          if (found) {
+                            selectVehicleForSalida(found);
+                          } else {
+                            setSelectedVehicleForSalida(null);
+                          }
+                        }}
+                        disabled={!selectedClientForSalida}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
+                      >
+                        {!selectedClientForSalida ? (
+                          <option value="">-- Primero selecciona un cliente arriba --</option>
+                        ) : (
+                          <>
+                            <option value="">-- Seleccionar vehículo de {selectedClientForSalida.name} ({vehicles.filter(v => v.ownerId === selectedClientForSalida.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForSalida.id).map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CABECERA FOLIO, FECHA, ASESOR Y ORDEN DE SERVICIO */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Nota de Salida #</label>
+                    <input
+                      type="text"
+                      required
+                      value={salNumero}
+                      onChange={(e) => setSalNumero(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-amber-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Fecha de Emisión</label>
+                    <input
+                      type="text"
+                      required
+                      value={salFecha}
+                      onChange={(e) => setSalFecha(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold"
+                      placeholder="DD/MM/AAAA"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Asesor Responsable</label>
+                    <input
+                      type="text"
+                      required
+                      value={salAsesor}
+                      onChange={(e) => setSalAsesor(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Orden de Servicio #</label>
+                    <input
+                      type="text"
+                      value={salOrdenServicioNumero}
+                      onChange={(e) => setSalOrdenServicioNumero(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-slate-800"
+                      placeholder="Ej. 378A"
+                    />
+                  </div>
+                </div>
+
+                {/* DATOS DEL CLIENTE Y VEHÍCULO (2 COLUMNAS) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* CLIENTE */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-2 uppercase tracking-wide flex items-center gap-1.5 text-amber-800">
+                      <User size={14} /> Datos del Cliente
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Nombre / Razón Social *</label>
+                        <input
+                          type="text"
+                          required
+                          value={salClienteNombre}
+                          onChange={(e) => setSalClienteNombre(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                          placeholder="Ej. Congregación de la misión"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Calle y Número</label>
+                        <input
+                          type="text"
+                          value={salClienteCalle}
+                          onChange={(e) => setSalClienteCalle(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                          placeholder="Ej. Av.San Fernando #154"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-slate-600 font-bold mb-0.5">C.P. y Colonia</label>
+                          <input
+                            type="text"
+                            value={salClienteCpColonia}
+                            onChange={(e) => setSalClienteCpColonia(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                            placeholder="14000 Tlalpan Centro"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-600 font-bold mb-0.5">Alcaldía / Municipio</label>
+                          <input
+                            type="text"
+                            value={salClienteAlcaldia}
+                            onChange={(e) => setSalClienteAlcaldia(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                            placeholder="Tlalpan"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Teléfono de Contacto</label>
+                        <input
+                          type="text"
+                          value={salClienteTelefono}
+                          onChange={(e) => setSalClienteTelefono(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                          placeholder="Ej. 73 5266 8332"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VEHÍCULO */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-2 uppercase tracking-wide flex items-center gap-1.5 text-amber-800">
+                      <Car size={14} /> Datos del Vehículo
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Marca / Motor</label>
+                        <input
+                          type="text"
+                          value={salMarcaMotor}
+                          onChange={(e) => setSalMarcaMotor(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                          placeholder="Ej. FORD-RANGER / 2.3L"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Modelo / Color</label>
+                        <input
+                          type="text"
+                          value={salModeloColor}
+                          onChange={(e) => setSalModeloColor(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-medium"
+                          placeholder="Ej. 2012 / BLANCO"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Matrícula (Placas) / VIN (N° Serie)</label>
+                        <input
+                          type="text"
+                          value={salMatriculaVin}
+                          onChange={(e) => setSalMatriculaVin(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-mono font-medium"
+                          placeholder="Ej. 865-XXJ / 8AFER5AD8C6453240"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-0.5">Kilometraje Actual (KM)</label>
+                        <input
+                          type="number"
+                          value={salKilometros || ''}
+                          onChange={(e) => setSalKilometros(parseFloat(e.target.value) || 0)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 text-slate-900 font-mono font-bold"
+                          placeholder="161282"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TABLA DE PARTIDAS / TRABAJOS Y REFACCIONES */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide flex items-center gap-1.5 text-amber-800">
+                      <ClipboardList size={16} /> Desglose de Partidas / Conceptos de Salida ({salItems.length})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={handleAddSalidaItem}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>Agregar Concepto</span>
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                          <th className="p-2.5 w-24">Código</th>
+                          <th className="p-2.5">Descripción del Servicio / Refacción</th>
+                          <th className="p-2.5 w-20 text-center">Cant.</th>
+                          <th className="p-2.5 w-32 text-right">Importe Unit.</th>
+                          <th className="p-2.5 w-36 text-right">Total</th>
+                          <th className="p-2.5 w-12 text-center">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center p-6 text-slate-400 italic">
+                              No hay conceptos agregados a esta nota de salida. Haz clic en "Agregar Concepto".
+                            </td>
+                          </tr>
+                        ) : (
+                          salItems.map((item, index) => (
+                            <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/30 transition-colors">
+                              <td className="p-2">
+                                <input
+                                  type="text"
+                                  value={item.codigo || ''}
+                                  onChange={(e) => handleUpdateSalidaItem(item.id, 'codigo', e.target.value)}
+                                  className="w-full p-1.5 border border-slate-200 rounded bg-white text-center font-mono text-xs font-bold"
+                                  placeholder="0000"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="text"
+                                  value={item.descripcion}
+                                  onChange={(e) => handleUpdateSalidaItem(item.id, 'descripcion', e.target.value)}
+                                  className="w-full p-1.5 border border-slate-200 rounded bg-white text-xs font-medium text-slate-900"
+                                  placeholder={`Concepto #${index + 1}`}
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.cantidad}
+                                  onChange={(e) => handleUpdateSalidaItem(item.id, 'cantidad', e.target.value)}
+                                  className="w-full p-1.5 border border-slate-200 rounded bg-white text-center font-bold text-xs"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={item.importeUnitario || ''}
+                                  onChange={(e) => handleUpdateSalidaItem(item.id, 'importeUnitario', e.target.value)}
+                                  className="w-full p-1.5 border border-slate-200 rounded bg-white text-right font-mono text-xs"
+                                  placeholder="0.00"
+                                />
+                              </td>
+                              <td className="p-2 text-right font-mono font-bold text-slate-900 text-xs">
+                                ${item.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="p-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSalidaItem(item.id)}
+                                  className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                  title="Eliminar concepto"
+                                >
+                                  <Trash size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* CONDICIONES DE PAGO Y GARANTÍA + TOTAL */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                  <div className="space-y-3 text-xs">
+                    <h5 className="font-bold text-slate-800 uppercase tracking-wide">Condiciones de Entrega y Garantía</h5>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-1">Forma de Pago</label>
+                        <select
+                          value={salFormaPago}
+                          onChange={(e) => setSalFormaPago(e.target.value)}
+                          className="w-full p-2 border border-slate-300 rounded-lg bg-white font-bold text-slate-800"
+                        >
+                          <option value="CONTADO">CONTADO</option>
+                          <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                          <option value="TARJETA">TARJETA</option>
+                          <option value="CREDITO">CRÉDITO TALLER</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 font-bold mb-1">Póliza de Garantía</label>
+                        <input
+                          type="text"
+                          value={salGarantia}
+                          onChange={(e) => setSalGarantia(e.target.value)}
+                          className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold text-slate-800"
+                          placeholder="30 DIAS Ó 2,000 KMS..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GRAN TOTAL */}
+                  <div className="flex flex-col justify-between items-end bg-white p-6 rounded-xl border border-amber-300/80 shadow-sm space-y-4">
+                    <div className="text-right w-full space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Total Liquidación / Salida</span>
+                      <div className="text-3xl sm:text-4xl font-extrabold text-amber-700 font-mono tracking-tight">
+                        ${salTotalCalculated.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-normal text-slate-500">MXN</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">Total calculado de {salItems.length} partidas registradas.</p>
+                    </div>
+
+                    {/* BOTONES PRINCIPALES DE ACCIÓN */}
+                    <div className="flex flex-wrap items-center gap-2 justify-end w-full border-t border-slate-100 pt-4">
+                      <button
+                        type="submit"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Check size={16} />
+                        <span>{editingSalidaId ? 'Guardar Cambios' : 'Guardar en Historial'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nObj: NotaSalida = {
+                            id: editingSalidaId || 'temp-sal',
+                            numero: salNumero,
+                            fecha: salFecha,
+                            asesor: salAsesor,
+                            clienteNombre: salClienteNombre,
+                            clienteCalle: salClienteCalle,
+                            clienteCpColonia: salClienteCpColonia,
+                            clienteAlcaldia: salClienteAlcaldia,
+                            clienteTelefono: salClienteTelefono,
+                            marcaMotor: salMarcaMotor,
+                            modeloColor: salModeloColor,
+                            matriculaVin: salMatriculaVin,
+                            kilometros: salKilometros,
+                            formaPago: salFormaPago,
+                            garantia: salGarantia,
+                            ordenServicioNumero: salOrdenServicioNumero,
+                            items: salItems,
+                            total: salTotalCalculated,
+                            createdAt: new Date().toISOString(),
+                            status: 'Emitida'
+                          };
+                          downloadSaeNotaSalidaPdf(nObj);
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Printer size={16} />
+                        <span>Imprimir / PDF SAE</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nObj: NotaSalida = {
+                            id: editingSalidaId || 'temp-sal',
+                            numero: salNumero,
+                            fecha: salFecha,
+                            asesor: salAsesor,
+                            clienteNombre: salClienteNombre,
+                            clienteCalle: salClienteCalle,
+                            clienteCpColonia: salClienteCpColonia,
+                            clienteAlcaldia: salClienteAlcaldia,
+                            clienteTelefono: salClienteTelefono,
+                            marcaMotor: salMarcaMotor,
+                            modeloColor: salModeloColor,
+                            matriculaVin: salMatriculaVin,
+                            kilometros: salKilometros,
+                            formaPago: salFormaPago,
+                            garantia: salGarantia,
+                            ordenServicioNumero: salOrdenServicioNumero,
+                            items: salItems,
+                            total: salTotalCalculated,
+                            createdAt: new Date().toISOString(),
+                            status: 'Emitida'
+                          };
+                          handleSendSalidaWhatsApp(nObj);
+                        }}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-700/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Send size={16} />
+                        <span>Enviar por WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: HISTORIAL DE SALIDAS */}
+          {salidaSubTab === 'historial' && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <History className="text-amber-600" size={20} />
+                    Historial de Notas de Salida Registradas
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Consultar notas de salida y comprobantes de liquidación emitidos.
+                  </p>
+                </div>
+
+                {/* BUSCADOR */}
+                <div className="relative min-w-[260px]">
+                  <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={salSearchQuery}
+                    onChange={(e) => setSalSearchQuery(e.target.value)}
+                    placeholder="Buscar por cliente, folio o placas..."
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* TABLA DE SALIDAS */}
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <th className="p-3">Folio Salida</th>
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Cliente</th>
+                      <th className="p-3">Vehículo</th>
+                      <th className="p-3">Ord. Serv.</th>
+                      <th className="p-3 text-right">Total</th>
+                      <th className="p-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notasSalida.filter(n =>
+                      !salSearchQuery ||
+                      n.numero.toLowerCase().includes(salSearchQuery.toLowerCase()) ||
+                      n.clienteNombre.toLowerCase().includes(salSearchQuery.toLowerCase()) ||
+                      n.matriculaVin.toLowerCase().includes(salSearchQuery.toLowerCase())
+                    ).map((nota) => (
+                      <tr key={nota.id} className="border-b border-slate-100 hover:bg-amber-50/40 transition-colors">
+                        <td className="p-3 font-mono font-bold text-amber-700">#{nota.numero}</td>
+                        <td className="p-3 text-slate-600">{nota.fecha}</td>
+                        <td className="p-3 font-bold text-slate-800">{nota.clienteNombre}</td>
+                        <td className="p-3 text-slate-600">{nota.marcaMotor} ({nota.matriculaVin})</td>
+                        <td className="p-3 text-slate-600 font-mono">#{nota.ordenServicioNumero || 'S/N'}</td>
+                        <td className="p-3 text-right font-mono font-bold text-emerald-700">
+                          ${nota.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleEditSalidaFromList(nota)}
+                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="Editar Nota de Salida"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => downloadSaeNotaSalidaPdf(nota)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Descargar PDF"
+                            >
+                              <Download size={15} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSendSalidaWhatsApp(nota)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Enviar por WhatsApp"
+                            >
+                              <Send size={15} />
+                            </button>
+
+                            {deleteNotaSalida && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`¿Eliminar la Nota de Salida #${nota.numero}?`)) {
+                                    deleteNotaSalida(nota.id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {notasSalida.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                          No hay notas de salida registradas aún. Registra una nueva usando el formulario.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: HISTORIAL DE PRESUPUESTOS (SECCIÓN REQUERIDA EN MÓDULO SALIDAS) */}
+          {salidaSubTab === 'presupuestos' && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <FileText className="text-indigo-600" size={20} />
+                    Historial de Presupuestos para Conversión a Nota de Salida
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Selecciona un presupuesto registrado para convertirlo directamente en Nota de Salida o consultar su PDF.
+                  </p>
+                </div>
+              </div>
+
+              {/* TABLA DE PRESUPUESTOS DISPONIBLES */}
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <th className="p-3">Folio Presupuesto</th>
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Cliente</th>
+                      <th className="p-3">Vehículo</th>
+                      <th className="p-3 text-center">Partidas</th>
+                      <th className="p-3 text-right">Total Presupuesto</th>
+                      <th className="p-3 text-right">Acción / Cargar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {presupuestos.map((pres) => (
+                      <tr key={pres.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-colors">
+                        <td className="p-3 font-mono font-bold text-indigo-700">#{pres.numero}</td>
+                        <td className="p-3 text-slate-600">{pres.fecha}</td>
+                        <td className="p-3 font-bold text-slate-800">{pres.clienteNombre}</td>
+                        <td className="p-3 text-slate-600">{pres.marcaMotor} ({pres.matriculaVin})</td>
+                        <td className="p-3 text-center font-bold text-slate-700">{pres.items.length}</td>
+                        <td className="p-3 text-right font-mono font-bold text-slate-800">
+                          ${pres.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleConvertPresupuestoToSalida(pres)}
+                              className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                              title="Cargar este presupuesto en la Nota de Salida"
+                            >
+                              <Sparkles size={13} />
+                              <span>Convertir a Salida</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => downloadSaePresupuestoPdf(pres)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Ver PDF Presupuesto"
+                            >
+                              <Download size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {presupuestos.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                          No hay presupuestos registrados en el sistema aún.
                         </td>
                       </tr>
                     )}

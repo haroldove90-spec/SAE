@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ServiceOrder, Client, Vehicle, Employee, Presupuesto, OrdenReparacion } from '../types';
+import { ServiceOrder, Client, Vehicle, Employee, Presupuesto, OrdenReparacion, NotaSalida } from '../types';
 
 /**
  * Returns the raw HTML string representing the official SAE Presupuesto form,
@@ -927,6 +927,195 @@ export async function shareSaeOrdenDeReparacionMobile(orden: OrdenReparacion): P
     return false;
   } catch (error) {
     console.error('Error sharing Orden de Reparación mobile:', error);
+    return false;
+  }
+}
+
+/**
+ * Returns raw HTML string representing the official SAE Nota de Salida form,
+ * matching physical paper format (Folio/Salida 187).
+ */
+export function getSaeNotaSalidaHtml(nota: NotaSalida): string {
+  const crimson = '#A21C26';
+
+  return `
+    <!-- Header Section -->
+    <div style="display: flex !important; justify-content: space-between !important; align-items: flex-start !important; margin-bottom: 15px !important; border-bottom: 2px solid ${crimson} !important; padding-bottom: 12px !important; background-color: transparent !important;">
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important; background-color: transparent !important;">
+        <!-- SAE Logo -->
+        <div style="display: flex !important; align-items: center !important; gap: 10px !important;">
+          <div style="font-family: 'Inter', sans-serif !important; font-weight: 900 !important; font-style: italic !important; font-size: 38px !important; color: ${crimson} !important; letter-spacing: -2px !important; line-height: 1 !important;">
+            SAE
+          </div>
+          <div style="font-size: 9px !important; color: ${crimson} !important; font-weight: 700 !important; max-width: 200px !important; line-height: 1.2 !important;">
+            Servicio Automotriz Especializado<br/>
+            <span style="font-size: 8px !important; font-weight: 900 !important;">¡¡¡LA ESCUDERÍA QUE TE LLEVA SEGURO A TU DESTINO!!!</span>
+          </div>
+        </div>
+        <div style="font-weight: 900 !important; font-size: 28px !important; color: ${crimson} !important; letter-spacing: 1px !important; margin-top: 4px !important;">
+          SALIDA
+        </div>
+      </div>
+
+      <!-- Workshop Info & Folio -->
+      <div style="text-align: right !important; font-size: 9.5px !important; color: #1F2937 !important; line-height: 1.3 !important;">
+        <div style="font-weight: 600 !important;">Mixtecas Mz.52 Lt.17 Esquina Rey Tepalcatzin</div>
+        <div>Col. Ajusco Alcaldia Coyoacan C.P.04300 C.D.M.X.</div>
+        <div style="font-weight: 700 !important; color: #111827 !important; margin-top: 2px !important;">Tel:55 4632 6652 y 55 3917 7754 Cel:55 1384 6680</div>
+        <div style="font-weight: 700 !important; color: ${crimson} !important; margin-top: 2px !important;">Atención Personal: ${nota.asesor || 'Alberto Flores Hdz.'}</div>
+        <div style="font-weight: 800 !important; font-size: 10px !important; color: #111827 !important;">Asesor De Servicios</div>
+        
+        <div style="display: flex !important; justify-content: flex-end !important; gap: 15px !important; margin-top: 8px !important; font-size: 12px !important; font-weight: 900 !important;">
+          <span>Número: <strong style="color: ${crimson} !important; font-size: 14px !important;">${nota.numero}</strong></span>
+          <span>Fecha: <strong style="color: #111827 !important;">${nota.fecha}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cliente & Vehiculo Header Grid -->
+    <div style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; margin-bottom: 12px !important; border: 1.5px solid #D1D5DB !important; border-radius: 8px !important; padding: 10px 12px !important; background-color: #FAFAFA !important; font-size: 11px !important; color: #111827 !important;">
+      <!-- Column 1: Cliente -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong style="color: #111827 !important;">CLIENTE:</strong> <span style="font-weight: 800 !important; color: #111827 !important;">${nota.clienteNombre}</span></div>
+        <div><strong>Calle:</strong> ${nota.clienteCalle}</div>
+        <div><strong>C.P./Colonia:</strong> ${nota.clienteCpColonia}</div>
+        <div><strong>Alcaldia:</strong> ${nota.clienteAlcaldia}</div>
+        <div><strong>Telefono:</strong> ${nota.clienteTelefono}</div>
+      </div>
+
+      <!-- Column 2: Vehículo -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong>Marca/Motor:</strong> ${nota.marcaMotor}</div>
+        <div><strong>Modelo/Color:</strong> ${nota.modeloColor}</div>
+        <div><strong>Matrícula:</strong> <strong style="color: #111827 !important;">${nota.matriculaVin}</strong></div>
+        <div><strong>Kilometros:</strong> ${nota.kilometros ? nota.kilometros.toLocaleString() : ''}</div>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <div style="margin-bottom: 12px !important; border: 1.5px solid #1E293B !important; border-radius: 6px !important; overflow: hidden !important;">
+      <table style="width: 100% !important; border-collapse: collapse !important; font-size: 10px !important;">
+        <thead>
+          <tr style="background-color: #1E293B !important; color: #FFFFFF !important; font-weight: 800 !important; text-transform: uppercase !important;">
+            <th style="padding: 6px 8px !important; text-align: left !important; width: 70px !important; border-right: 1px solid #334155 !important;">Código</th>
+            <th style="padding: 6px 8px !important; text-align: left !important; border-right: 1px solid #334155 !important;">Repuestos</th>
+            <th style="padding: 6px 8px !important; text-align: center !important; width: 50px !important; border-right: 1px solid #334155 !important;">Cant.</th>
+            <th style="padding: 6px 8px !important; text-align: right !important; width: 80px !important; border-right: 1px solid #334155 !important;">Importe. U</th>
+            <th style="padding: 6px 8px !important; text-align: right !important; width: 90px !important;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${nota.items.map((item, idx) => `
+            <tr style="border-bottom: 1px solid #E2E8F0 !important; background-color: ${idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'} !important; color: #0F172A !important;">
+              <td style="padding: 5px 8px !important; font-weight: 700 !important; font-family: monospace !important; border-right: 1px solid #E2E8F0 !important;">${item.codigo || ''}</td>
+              <td style="padding: 5px 8px !important; border-right: 1px solid #E2E8F0 !important;">${item.descripcion}</td>
+              <td style="padding: 5px 8px !important; text-align: center !important; font-weight: 700 !important; border-right: 1px solid #E2E8F0 !important;">${item.cantidad}</td>
+              <td style="padding: 5px 8px !important; text-align: right !important; border-right: 1px solid #E2E8F0 !important;">${item.importeUnitario.toFixed(2)}</td>
+              <td style="padding: 5px 8px !important; text-align: right !important; font-weight: 800 !important;">${item.total.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer & Totals -->
+    <div style="display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 15px !important; margin-bottom: 12px !important;">
+      <div style="font-size: 10px !important; color: #1E293B !important; line-height: 1.5 !important; flex: 1 !important;">
+        <div><strong>FORMA DE PAGO:</strong> ${nota.formaPago || 'CONTADO'}</div>
+        <div style="font-weight: 900 !important; color: ${crimson} !important; margin-top: 2px !important;">***DOCUMENTO SIN VALOR FISCAL***</div>
+        <div style="font-weight: 800 !important; color: #111827 !important; font-size: 9.5px !important; margin-top: 3px !important;">
+          GARANTIA: ${nota.garantia || '30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO'} &nbsp;&nbsp;&nbsp; ORD. DE SERV. # ${nota.ordenServicioNumero || '378A'}
+        </div>
+      </div>
+
+      <!-- Total Box -->
+      <div style="border: 2px solid #1E293B !important; border-radius: 6px !important; overflow: hidden !important; min-width: 180px !important; text-align: right !important;">
+        <div style="background-color: #1E293B !important; color: #FFFFFF !important; font-weight: 900 !important; font-size: 11px !important; padding: 4px 10px !important; text-align: center !important; text-transform: uppercase !important;">
+          Total
+        </div>
+        <div style="padding: 8px 12px !important; font-size: 18px !important; font-weight: 900 !important; color: #0F172A !important; font-family: monospace !important; background-color: #F1F5F9 !important;">
+          $${nota.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export async function generateSaeNotaSalidaPdfBlob(nota: NotaSalida): Promise<Blob | null> {
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.width = '794px'; // ~A4 width in px at 96 DPI
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.color = '#000000';
+  container.style.padding = '30px';
+  container.style.fontFamily = 'Inter, Arial, sans-serif';
+
+  container.innerHTML = getSaeNotaSalidaHtml(nota);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#FFFFFF'
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 10;
+
+    pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+    return pdf.output('blob');
+  } catch (error) {
+    console.error('Error generating Nota de Salida PDF blob:', error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+export async function downloadSaeNotaSalidaPdf(nota: NotaSalida): Promise<void> {
+  const pdfBlob = await generateSaeNotaSalidaPdfBlob(nota);
+  if (!pdfBlob) return;
+  const url = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Nota_de_Salida_SAE_Numero_${nota.numero}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function shareSaeNotaSalidaMobile(nota: NotaSalida): Promise<boolean> {
+  try {
+    const pdfBlob = await generateSaeNotaSalidaPdfBlob(nota);
+    if (!pdfBlob) return false;
+    const file = new File(
+      [pdfBlob],
+      `Nota_de_Salida_SAE_Numero_${nota.numero}.pdf`,
+      { type: 'application/pdf' }
+    );
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `Nota de Salida SAE Número ${nota.numero}`,
+        text: `Te compartimos la Nota de Salida oficial de tu vehículo en Servicio Automotriz Especializado (SAE).`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sharing Nota de Salida mobile:', error);
     return false;
   }
 }

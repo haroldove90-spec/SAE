@@ -1,4 +1,4 @@
-import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, Presupuesto, OrdenReparacion } from './types';
+import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, Presupuesto, OrdenReparacion, NotaSalida } from './types';
 
 export const INITIAL_CLIENTS: Client[] = [
   {
@@ -695,6 +695,50 @@ export const INITIAL_ORDENES_REPARACION: OrdenReparacion[] = [
       { id: 'ori-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4 },
       { id: 'ori-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1 },
       { id: 'ori-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1 }
+    ]
+  }
+];
+
+export const INITIAL_NOTAS_SALIDA: NotaSalida[] = [
+  {
+    id: 'sal-187',
+    numero: '187',
+    fecha: '16/07/2026',
+    asesor: 'Alberto Flores Hdz.',
+    clienteNombre: 'Congregación de la misión',
+    clienteCalle: 'Av.San Fernando #154',
+    clienteCpColonia: '14000 Tlalpan Centro',
+    clienteAlcaldia: 'Tlalpan',
+    clienteTelefono: '73 5266 8332',
+    marcaMotor: 'FORD-RANGER / 2.3L',
+    modeloColor: '2012 / BLANCO',
+    matriculaVin: '865-XXJ / 8AFER5AD8C6453240',
+    kilometros: 161282,
+    formaPago: 'CONTADO',
+    garantia: '30 DIAS Ó 2,000 KMS. LO QUE OCURRA PRIMERO',
+    ordenServicioNumero: '378A',
+    total: 34773.00,
+    createdAt: '2026-07-16T10:00:00.000Z',
+    status: 'Emitida',
+    items: [
+      { id: 'nsi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1, importeUnitario: 3850.00, total: 3850.00 },
+      { id: 'nsi-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1, importeUnitario: 350.00, total: 350.00 },
+      { id: 'nsi-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1, importeUnitario: 1700.00, total: 1700.00 },
+      { id: 'nsi-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'nsi-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2, importeUnitario: 1350.00, total: 2700.00 },
+      { id: 'nsi-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2, importeUnitario: 975.00, total: 1950.00 },
+      { id: 'nsi-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2, importeUnitario: 713.00, total: 1426.00 },
+      { id: 'nsi-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2, importeUnitario: 580.00, total: 1160.00 },
+      { id: 'nsi-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1, importeUnitario: 850.00, total: 850.00 },
+      { id: 'nsi-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4, importeUnitario: 240.00, total: 960.00 },
+      { id: 'nsi-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 3800.00, total: 3800.00 },
+      { id: 'nsi-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1, importeUnitario: 950.00, total: 950.00 },
+      { id: 'nsi-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2, importeUnitario: 280.00, total: 560.00 },
+      { id: 'nsi-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 450.00, total: 450.00 },
+      { id: 'nsi-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'nsi-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4, importeUnitario: 298.00, total: 1192.00 },
+      { id: 'nsi-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1, importeUnitario: 6500.00, total: 6500.00 },
+      { id: 'nsi-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1, importeUnitario: 3975.00, total: 3975.00 }
     ]
   }
 ];
