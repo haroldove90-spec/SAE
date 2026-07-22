@@ -3,9 +3,9 @@ import {
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
   Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck, User,
   Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail,
-  HelpCircle, Printer, RefreshCw, Edit2, Eye, DollarSign
+  HelpCircle, Printer, RefreshCw, Edit2, Eye, DollarSign, ClipboardList
 } from 'lucide-react';
-import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist, Presupuesto, PresupuestoItem } from '../types';
+import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist, Presupuesto, PresupuestoItem, OrdenReparacion, OrdenReparacionItem } from '../types';
 import { 
   generateSaePdf, 
   generateSaeImageBlob, 
@@ -14,7 +14,10 @@ import {
   shareSaeOrderMobile,
   getSaePresupuestoHtml,
   downloadSaePresupuestoPdf,
-  shareSaePresupuestoMobile
+  shareSaePresupuestoMobile,
+  getSaeOrdenDeReparacionHtml,
+  downloadSaeOrdenDeReparacionPdf,
+  shareSaeOrdenDeReparacionMobile
 } from '../utils/saePdf';
 import { SignaturePad } from './SignaturePad';
 
@@ -25,6 +28,7 @@ interface AdvisorDashboardProps {
   inventory: InventoryItem[];
   orders: ServiceOrder[];
   presupuestos?: Presupuesto[];
+  ordenesReparacion?: OrdenReparacion[];
   addClient: (c: Omit<Client, 'id' | 'creditBalance'>) => Client;
   updateClient: (c: Client) => void;
   addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle;
@@ -38,9 +42,12 @@ interface AdvisorDashboardProps {
   addPresupuesto?: (p: Omit<Presupuesto, 'id' | 'createdAt'>) => Presupuesto;
   updatePresupuesto?: (p: Presupuesto) => void;
   deletePresupuesto?: (id: string) => void;
+  addOrdenReparacion?: (ord: Omit<OrdenReparacion, 'id' | 'createdAt'>) => OrdenReparacion;
+  updateOrdenReparacion?: (ord: OrdenReparacion) => void;
+  deleteOrdenReparacion?: (id: string) => void;
   convertPresupuestoToOrder?: (id: string) => ServiceOrder | null;
-  activeTab?: 'reception' | 'quotes' | 'agenda' | 'crm';
-  setActiveTab?: (tab: 'reception' | 'quotes' | 'agenda' | 'crm') => void;
+  activeTab?: 'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm';
+  setActiveTab?: (tab: 'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm') => void;
 }
 
 export default function AdvisorDashboard({
@@ -50,6 +57,7 @@ export default function AdvisorDashboard({
   inventory,
   orders,
   presupuestos = [],
+  ordenesReparacion = [],
   addClient,
   updateClient,
   addVehicle,
@@ -63,11 +71,14 @@ export default function AdvisorDashboard({
   addPresupuesto,
   updatePresupuesto,
   deletePresupuesto,
+  addOrdenReparacion,
+  updateOrdenReparacion,
+  deleteOrdenReparacion,
   convertPresupuestoToOrder,
   activeTab: controlledActiveTab,
   setActiveTab: controlledSetActiveTab
 }: AdvisorDashboardProps) {
-  const [localActiveTab, setLocalActiveTab] = useState<'reception' | 'quotes' | 'agenda' | 'crm'>('reception');
+  const [localActiveTab, setLocalActiveTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm'>('reception');
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
   const setActiveTab = controlledSetActiveTab !== undefined ? controlledSetActiveTab : setLocalActiveTab;
 
@@ -456,6 +467,269 @@ export default function AdvisorDashboard({
     text += `⏱️ Validez: ${p.validezDias} días hábiles\n`;
     text += `Atención Personal: ${p.asesor}\n\n`;
     text += `📌 _Si deseas autorizar este presupuesto o tienes dudas, puedes responder a este mensaje._`;
+
+    const encoded = encodeURIComponent(text);
+    const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
+  };
+
+  // Selected Client / Vehicle Helper for Presupuesto
+  const [selectedClientForPresupuesto, setSelectedClientForPresupuesto] = useState<Client | null>(null);
+  const [selectedVehicleForPresupuesto, setSelectedVehicleForPresupuesto] = useState<Vehicle | null>(null);
+
+  const selectClientForPresupuesto = (client: Client) => {
+    setSelectedClientForPresupuesto(client);
+    setPresClienteNombre(client.name);
+    setPresClienteCalle(client.calle || client.address || '');
+    setPresClienteCpColonia(`${client.cp || ''} ${client.colonia || ''}`.trim());
+    setPresClienteAlcaldia(client.alcaldia || '');
+    setPresClienteTelefono(client.phone || client.telFijo || '');
+
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    if (clientVehicles.length > 0) {
+      selectVehicleForPresupuesto(clientVehicles[0]);
+    } else {
+      setSelectedVehicleForPresupuesto(null);
+    }
+  };
+
+  const selectVehicleForPresupuesto = (v: Vehicle) => {
+    setSelectedVehicleForPresupuesto(v);
+    setPresMarcaMotor(`${v.brand}-${v.model} / ${v.motor || 'Motor'}`);
+    setPresModeloColor(`${v.year} / ${v.color || 'Blanco'}`);
+    setPresMatriculaVin(`${v.plate || 'SIN-PLACA'} / ${v.vin || v.serie || 'SIN-VIN'}`);
+    setPresKilometros(v.mileage || 0);
+  };
+
+  // State for Orden de Reparación
+  const [ordenSubTab, setOrdenSubTab] = useState<'formulario' | 'historial'>('formulario');
+  const [editingOrdenId, setEditingOrdenId] = useState<string | null>(null);
+
+  const [ordNumero, setOrdNumero] = useState(() => (180 + (ordenesReparacion?.length || 0) + 1).toString());
+  const [ordFecha, setOrdFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [ordAsesor, setOrdAsesor] = useState('Alberto Flores Hdz.');
+  const [ordTecnico, setOrdTecnico] = useState('Ing. Carlos Mendoza');
+
+  const [ordRotacionAireLlantas, setOrdRotacionAireLlantas] = useState('OK (32 PSI)');
+  const [ordRevLimpiaParabrisas, setOrdRevLimpiaParabrisas] = useState('OK');
+  const [ordRevLucesNivelesEngral, setOrdRevLucesNivelesEngral] = useState('Niveles OK');
+
+  const [ordClienteNombre, setOrdClienteNombre] = useState('');
+  const [ordClienteCalle, setOrdClienteCalle] = useState('');
+  const [ordClienteCpColonia, setOrdClienteCpColonia] = useState('');
+  const [ordClienteAlcaldia, setOrdClienteAlcaldia] = useState('');
+  const [ordClienteTelefono, setOrdClienteTelefono] = useState('');
+
+  const [ordMarcaMotor, setOrdMarcaMotor] = useState('');
+  const [ordModeloColor, setOrdModeloColor] = useState('');
+  const [ordMatriculaVin, setOrdMatriculaVin] = useState('');
+  const [ordKilometros, setOrdKilometros] = useState<number>(0);
+
+  const [ordItems, setOrdItems] = useState<OrdenReparacionItem[]>([
+    { id: 'ori-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado', cantidad: 1 }
+  ]);
+
+  const [ordNotas, setOrdNotas] = useState('');
+  const [ordSearchQuery, setOrdSearchQuery] = useState('');
+  const [ordSuccessMessage, setOrdSuccessMessage] = useState<string | null>(null);
+
+  const [selectedClientForOrden, setSelectedClientForOrden] = useState<Client | null>(null);
+  const [selectedVehicleForOrden, setSelectedVehicleForOrden] = useState<Vehicle | null>(null);
+
+  const selectClientForOrden = (client: Client) => {
+    setSelectedClientForOrden(client);
+    setOrdClienteNombre(client.name);
+    setOrdClienteCalle(client.calle || client.address || '');
+    setOrdClienteCpColonia(`${client.cp || ''} ${client.colonia || ''}`.trim());
+    setOrdClienteAlcaldia(client.alcaldia || '');
+    setOrdClienteTelefono(client.phone || client.telFijo || '');
+
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    if (clientVehicles.length > 0) {
+      selectVehicleForOrden(clientVehicles[0]);
+    } else {
+      setSelectedVehicleForOrden(null);
+    }
+  };
+
+  const selectVehicleForOrden = (v: Vehicle) => {
+    setSelectedVehicleForOrden(v);
+    setOrdMarcaMotor(`${v.brand}-${v.model} / ${v.motor || 'Motor'}`);
+    setOrdModeloColor(`${v.year} / ${v.color || 'Blanco'}`);
+    setOrdMatriculaVin(`${v.plate || 'SIN-PLACA'} / ${v.vin || v.serie || 'SIN-VIN'}`);
+    setOrdKilometros(v.mileage || 0);
+  };
+
+  const handleLoadSampleOrdenPaperData = () => {
+    setOrdNumero('180');
+    setOrdFecha('07/07/2026');
+    setOrdAsesor('Alberto Flores Hdz.');
+    setOrdTecnico('Ing. Carlos Mendoza');
+    setOrdRotacionAireLlantas('OK (32 PSI)');
+    setOrdRevLimpiaParabrisas('OK');
+    setOrdRevLucesNivelesEngral('Niveles OK');
+    setOrdClienteNombre('Congregación de la misión');
+    setOrdClienteCalle('Av.San Fernando #154');
+    setOrdClienteCpColonia('14000 Tlalpan Centro');
+    setOrdClienteAlcaldia('Tlalpan');
+    setOrdClienteTelefono('73 5266 8332');
+    setOrdMarcaMotor('FORD-RANGER / 2.3L');
+    setOrdModeloColor('2012 / BLANCO');
+    setOrdMatriculaVin('865-XXJ / 8AFER5AD8C6453240');
+    setOrdKilometros(161282);
+    setOrdItems([
+      { id: 'ori-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1 },
+      { id: 'ori-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1 },
+      { id: 'ori-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1 },
+      { id: 'ori-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1 },
+      { id: 'ori-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2 },
+      { id: 'ori-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2 },
+      { id: 'ori-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2 },
+      { id: 'ori-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2 },
+      { id: 'ori-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1 },
+      { id: 'ori-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4 },
+      { id: 'ori-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1 },
+      { id: 'ori-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1 },
+      { id: 'ori-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2 },
+      { id: 'ori-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1 },
+      { id: 'ori-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1 },
+      { id: 'ori-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4 },
+      { id: 'ori-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1 },
+      { id: 'ori-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1 }
+    ]);
+    setOrdSuccessMessage('📄 Órden de Reparación Folio 180 cargada correctamente desde el documento de muestra');
+    setTimeout(() => setOrdSuccessMessage(null), 3000);
+  };
+
+  const handleAddOrdenItem = () => {
+    const newItem: OrdenReparacionItem = {
+      id: `ori-${Date.now()}`,
+      codigo: '',
+      descripcion: '',
+      cantidad: 1
+    };
+    setOrdItems(prev => [...prev, newItem]);
+  };
+
+  const handleUpdateOrdenItem = (id: string, field: keyof OrdenReparacionItem, val: any) => {
+    setOrdItems(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: val };
+      }
+      return item;
+    }));
+  };
+
+  const handleRemoveOrdenItem = (id: string) => {
+    setOrdItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleSaveOrdenReparacion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ordClienteNombre.trim()) {
+      alert('Por favor ingresa el nombre del cliente');
+      return;
+    }
+
+    const payload = {
+      numero: ordNumero,
+      fecha: ordFecha,
+      asesor: ordAsesor,
+      tecnico: ordTecnico,
+      rotacionAireLlantas: ordRotacionAireLlantas,
+      revLimpiaParabrisas: ordRevLimpiaParabrisas,
+      revLucesNivelesEngral: ordRevLucesNivelesEngral,
+      clienteNombre: ordClienteNombre,
+      clienteCalle: ordClienteCalle,
+      clienteCpColonia: ordClienteCpColonia,
+      clienteAlcaldia: ordClienteAlcaldia,
+      clienteTelefono: ordClienteTelefono,
+      marcaMotor: ordMarcaMotor,
+      modeloColor: ordModeloColor,
+      matriculaVin: ordMatriculaVin,
+      kilometros: ordKilometros,
+      items: ordItems,
+      notas: ordNotas,
+      clientId: selectedClientForOrden?.id,
+      vehicleId: selectedVehicleForOrden?.id,
+      status: 'En Proceso' as const
+    };
+
+    if (editingOrdenId && updateOrdenReparacion) {
+      updateOrdenReparacion({
+        ...payload,
+        id: editingOrdenId,
+        createdAt: new Date().toISOString()
+      });
+      setOrdSuccessMessage(`✅ Órden de Reparación #${ordNumero} actualizada exitosamente.`);
+    } else if (addOrdenReparacion) {
+      addOrdenReparacion(payload);
+      setOrdSuccessMessage(`🎉 Órden de Reparación #${ordNumero} registrada correctamente en el historial.`);
+    }
+
+    setEditingOrdenId(null);
+    setTimeout(() => setOrdSuccessMessage(null), 3000);
+  };
+
+  const handleEditOrdenFromList = (ord: OrdenReparacion) => {
+    setEditingOrdenId(ord.id);
+    setOrdNumero(ord.numero);
+    setOrdFecha(ord.fecha);
+    setOrdAsesor(ord.asesor || 'Alberto Flores Hdz.');
+    setOrdTecnico(ord.tecnico || 'Ing. Carlos Mendoza');
+    setOrdRotacionAireLlantas(ord.rotacionAireLlantas || '');
+    setOrdRevLimpiaParabrisas(ord.revLimpiaParabrisas || '');
+    setOrdRevLucesNivelesEngral(ord.revLucesNivelesEngral || '');
+    setOrdClienteNombre(ord.clienteNombre);
+    setOrdClienteCalle(ord.clienteCalle);
+    setOrdClienteCpColonia(ord.clienteCpColonia);
+    setOrdClienteAlcaldia(ord.clienteAlcaldia);
+    setOrdClienteTelefono(ord.clienteTelefono);
+    setOrdMarcaMotor(ord.marcaMotor);
+    setOrdModeloColor(ord.modeloColor);
+    setOrdMatriculaVin(ord.matriculaVin);
+    setOrdKilometros(ord.kilometros || 0);
+    setOrdItems(ord.items || []);
+    setOrdNotas(ord.notas || '');
+    setOrdenSubTab('formulario');
+  };
+
+  const handleResetOrdenForm = () => {
+    setEditingOrdenId(null);
+    setOrdNumero((180 + (ordenesReparacion?.length || 0) + 1).toString());
+    setOrdFecha(new Date().toISOString().split('T')[0]);
+    setOrdClienteNombre('');
+    setOrdClienteCalle('');
+    setOrdClienteCpColonia('');
+    setOrdClienteAlcaldia('');
+    setOrdClienteTelefono('');
+    setOrdMarcaMotor('');
+    setOrdModeloColor('');
+    setOrdMatriculaVin('');
+    setOrdKilometros(0);
+    setOrdItems([
+      { id: `ori-${Date.now()}`, codigo: '', descripcion: '', cantidad: 1 }
+    ]);
+  };
+
+  const handleSendOrdenWhatsApp = (ord: OrdenReparacion) => {
+    const rawPhone = (ord.clienteTelefono || '').replace(/\D/g, '');
+    const phone = rawPhone.length === 10 ? `52${rawPhone}` : rawPhone;
+
+    let text = `*SERVICIO AUTOMOTRIZ ESPECIALIZADO (SAE)*\n`;
+    text += `*ÓRDEN DE REPARACIÓN #${ord.numero}*\n`;
+    text += `📅 Fecha: ${ord.fecha}\n`;
+    text += `👤 Cliente: *${ord.clienteNombre}*\n`;
+    text += `🚗 Vehículo: *${ord.marcaMotor}* | Placas: *${ord.matriculaVin}*\n`;
+    text += `👨‍🔧 Técnico: ${ord.tecnico}\n`;
+    text += `------------------------------------\n`;
+    text += `*REFACCIONES Y TRABAJOS A REALIZAR:*\n`;
+    ord.items.forEach((item, idx) => {
+      text += `${idx + 1}. ${item.descripcion} (${item.cantidad} pza${item.cantidad > 1 ? 's' : ''})\n`;
+    });
+    text += `------------------------------------\n`;
+    text += `Atención Personal: ${ord.asesor}\n\n`;
+    text += `📌 _Te compartimos la órden de trabajo para el seguimiento de tu unidad._`;
 
     const encoded = encodeURIComponent(text);
     const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
@@ -1825,6 +2099,75 @@ export default function AdvisorDashboard({
 
               {/* FORMULARIO PRESUPUESTO */}
               <form onSubmit={handleSavePresupuesto} className="space-y-6">
+                {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO */}
+                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-600" />
+                      Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
+                    </label>
+                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                      {clients.length} clientes en base de datos
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Cliente Registrado</label>
+                      <select
+                        value={selectedClientForPresupuesto?.id || ''}
+                        onChange={(e) => {
+                          const found = clients.find(c => c.id === e.target.value);
+                          if (found) {
+                            selectClientForPresupuesto(found);
+                          } else {
+                            setSelectedClientForPresupuesto(null);
+                            setSelectedVehicleForPresupuesto(null);
+                          }
+                        }}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="">-- Buscar o seleccionar cliente registrado --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Vehículo del Cliente</label>
+                      <select
+                        value={selectedVehicleForPresupuesto?.id || ''}
+                        onChange={(e) => {
+                          const found = vehicles.find(v => v.id === e.target.value);
+                          if (found) {
+                            selectVehicleForPresupuesto(found);
+                          } else {
+                            setSelectedVehicleForPresupuesto(null);
+                          }
+                        }}
+                        disabled={!selectedClientForPresupuesto}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
+                      >
+                        {!selectedClientForPresupuesto ? (
+                          <option value="">-- Primero selecciona un cliente arriba --</option>
+                        ) : (
+                          <>
+                            <option value="">-- Seleccionar vehículo de {selectedClientForPresupuesto.name} ({vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id).map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 {/* CABECERA FOLIO, FECHA & ASESOR */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
                   <div>
@@ -2685,6 +3028,640 @@ export default function AdvisorDashboard({
         </div>
       )}
 
+      {/* ÓRDENES DE REPARACIÓN TAB */}
+      {activeTab === 'ordenes_reparacion' && (
+        <div className="space-y-6">
+          {/* SUB-NAVIGATION BAR */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOrdenSubTab('formulario')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  ordenSubTab === 'formulario'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Plus size={15} />
+                <span>Formulario Órden de Reparación</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrdenSubTab('historial')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  ordenSubTab === 'historial'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <History size={15} />
+                <span>Historial de Órdenes ({ordenesReparacion.length})</span>
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium hidden sm:block">
+              Módulo Oficial Órdenes de Reparación SAE • Hoja de Trabajo
+            </div>
+          </div>
+
+          {/* SUCCESS MESSAGE BANNER */}
+          {ordSuccessMessage && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
+              <Check size={18} className="text-emerald-600 shrink-0" />
+              <span>{ordSuccessMessage}</span>
+            </div>
+          )}
+
+          {/* SUB-TAB 1: FORMULARIO ÓRDEN DE REPARACIÓN */}
+          {ordenSubTab === 'formulario' && (
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
+              {/* HEADER ACTIONS BAR */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <ClipboardList className="text-amber-600" size={20} />
+                    {editingOrdenId ? `Editando Órden de Reparación #${ordNumero}` : 'Nueva Órden de Reparación'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Registra la información completa del cliente, vehículo, revisiones generales y trabajos requeridos.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleOrdenPaperData}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Sparkles size={14} />
+                    <span>Ejemplo Muestra Hoja SAE (Folio 180)</span>
+                  </button>
+
+                  {editingOrdenId && (
+                    <button
+                      type="button"
+                      onClick={handleResetOrdenForm}
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                    >
+                      Cancelar Edición
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* FORMULARIO */}
+              <form onSubmit={handleSaveOrdenReparacion} className="space-y-6">
+                {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO */}
+                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-600" />
+                      Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
+                    </label>
+                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                      {clients.length} clientes en base de datos
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Cliente Registrado</label>
+                      <select
+                        value={selectedClientForOrden?.id || ''}
+                        onChange={(e) => {
+                          const found = clients.find(c => c.id === e.target.value);
+                          if (found) {
+                            selectClientForOrden(found);
+                          } else {
+                            setSelectedClientForOrden(null);
+                            setSelectedVehicleForOrden(null);
+                          }
+                        }}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="">-- Buscar o seleccionar cliente registrado --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Vehículo del Cliente</label>
+                      <select
+                        value={selectedVehicleForOrden?.id || ''}
+                        onChange={(e) => {
+                          const found = vehicles.find(v => v.id === e.target.value);
+                          if (found) {
+                            selectVehicleForOrden(found);
+                          } else {
+                            setSelectedVehicleForOrden(null);
+                          }
+                        }}
+                        disabled={!selectedClientForOrden}
+                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
+                      >
+                        {!selectedClientForOrden ? (
+                          <option value="">-- Primero selecciona un cliente arriba --</option>
+                        ) : (
+                          <>
+                            <option value="">-- Seleccionar vehículo de {selectedClientForOrden.name} ({vehicles.filter(v => v.ownerId === selectedClientForOrden.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForOrden.id).map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RED WARNING NOTICE BOX MATCHING PAPER FORM */}
+                <div className="bg-red-50 border-2 border-red-600 rounded-xl p-3 text-red-700 text-xs font-bold leading-relaxed shadow-sm uppercase">
+                  ⚠️ RECUERDA QUE LAS REFACCIONES QUE SE UTILICEN DEBEN SER ANOTADAS AL REVERZO DE LA HOJA, LAS QUE SE COMPRARON Y LAS QUE SE EXTRAJERON DEL ALMACEN.
+                </div>
+
+                {/* METADATA HEADERS */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Órden Número #</label>
+                    <input
+                      type="text"
+                      required
+                      value={ordNumero}
+                      onChange={(e) => setOrdNumero(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-red-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      required
+                      value={ordFecha}
+                      onChange={(e) => setOrdFecha(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Atención Personal (Asesor)</label>
+                    <input
+                      type="text"
+                      required
+                      value={ordAsesor}
+                      onChange={(e) => setOrdAsesor(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-800 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Técnico Asignado</label>
+                    <input
+                      type="text"
+                      required
+                      value={ordTecnico}
+                      onChange={(e) => setOrdTecnico(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white text-slate-800 font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* CLIENT & VEHICLE SECTION GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* CLIENT INFO */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">
+                      Información del Cliente
+                    </h4>
+
+                    <div>
+                      <label className="block text-slate-500 font-medium mb-1">Nombre / Empresa</label>
+                      <input
+                        type="text"
+                        required
+                        value={ordClienteNombre}
+                        onChange={(e) => setOrdClienteNombre(e.target.value)}
+                        placeholder="Ej. Congregación de la misión"
+                        className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Calle y Número</label>
+                        <input
+                          type="text"
+                          value={ordClienteCalle}
+                          onChange={(e) => setOrdClienteCalle(e.target.value)}
+                          placeholder="Av. San Fernando #154"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">C.P. / Colonia</label>
+                        <input
+                          type="text"
+                          value={ordClienteCpColonia}
+                          onChange={(e) => setOrdClienteCpColonia(e.target.value)}
+                          placeholder="14000 Tlalpan Centro"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Alcaldía / Municipio</label>
+                        <input
+                          type="text"
+                          value={ordClienteAlcaldia}
+                          onChange={(e) => setOrdClienteAlcaldia(e.target.value)}
+                          placeholder="Tlalpan"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Teléfono</label>
+                        <input
+                          type="text"
+                          value={ordClienteTelefono}
+                          onChange={(e) => setOrdClienteTelefono(e.target.value)}
+                          placeholder="73 5266 8332"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VEHICLE INFO */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                    <h4 className="font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">
+                      Información del Vehículo
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Marca / Motor</label>
+                        <input
+                          type="text"
+                          value={ordMarcaMotor}
+                          onChange={(e) => setOrdMarcaMotor(e.target.value)}
+                          placeholder="FORD-RANGER / 2.3L"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Modelo / Color</label>
+                        <input
+                          type="text"
+                          value={ordModeloColor}
+                          onChange={(e) => setOrdModeloColor(e.target.value)}
+                          placeholder="2012 / BLANCO"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Matrícula / VIN</label>
+                        <input
+                          type="text"
+                          value={ordMatriculaVin}
+                          onChange={(e) => setOrdMatriculaVin(e.target.value)}
+                          placeholder="865-XXJ / 8AFER5AD8C6453240"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono font-bold text-red-700 uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Kilómetros</label>
+                        <input
+                          type="number"
+                          value={ordKilometros || ''}
+                          onChange={(e) => setOrdKilometros(parseFloat(e.target.value) || 0)}
+                          placeholder="161282"
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* QUALITY REVISIONS SECTION */}
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                  <h4 className="font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">
+                    Controles de Calidad y Revision General
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-slate-500 font-medium mb-1">Rotación y Presión de Aire a Llantas</label>
+                      <input
+                        type="text"
+                        value={ordRotacionAireLlantas}
+                        onChange={(e) => setOrdRotacionAireLlantas(e.target.value)}
+                        className="w-full p-2 border border-slate-200 rounded-lg bg-white font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-medium mb-1">Rev. Limpia Parabrisas y Chisgueteros</label>
+                      <input
+                        type="text"
+                        value={ordRevLimpiaParabrisas}
+                        onChange={(e) => setOrdRevLimpiaParabrisas(e.target.value)}
+                        className="w-full p-2 border border-slate-200 rounded-lg bg-white font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-500 font-medium mb-1">Rev. de Luces y Niveles en General</label>
+                      <input
+                        type="text"
+                        value={ordRevLucesNivelesEngral}
+                        onChange={(e) => setOrdRevLucesNivelesEngral(e.target.value)}
+                        className="w-full p-2 border border-slate-200 rounded-lg bg-white font-medium"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ITEMS TABLE */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <h4 className="font-bold text-slate-800 text-sm font-display">
+                      Desglose de Repuestos y Trabajos a Realizar
+                    </h4>
+
+                    <button
+                      type="button"
+                      onClick={handleAddOrdenItem}
+                      className="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>Agregar Partida</span>
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-800 text-white font-bold">
+                          <th className="p-2.5 w-32 border-r border-slate-700">Marca / Cód.</th>
+                          <th className="p-2.5 border-r border-slate-700">Repuestos / Trabajos</th>
+                          <th className="p-2.5 w-24 text-center border-r border-slate-700">Cant.</th>
+                          <th className="p-2.5 w-16 text-center">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordItems.map((item, idx) => (
+                          <tr key={item.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                            <td className="p-2 border-r border-slate-200">
+                              <input
+                                type="text"
+                                value={item.codigo || ''}
+                                onChange={(e) => handleUpdateOrdenItem(item.id, 'codigo', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white font-mono text-xs"
+                                placeholder="Cód/Marca"
+                              />
+                            </td>
+                            <td className="p-2 border-r border-slate-200">
+                              <input
+                                type="text"
+                                required
+                                value={item.descripcion}
+                                onChange={(e) => handleUpdateOrdenItem(item.id, 'descripcion', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white text-xs"
+                                placeholder="Descripción del trabajo o refacción..."
+                              />
+                            </td>
+                            <td className="p-2 border-r border-slate-200 text-center">
+                              <input
+                                type="number"
+                                min="1"
+                                required
+                                value={item.cantidad}
+                                onChange={(e) => handleUpdateOrdenItem(item.id, 'cantidad', parseInt(e.target.value) || 1)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white text-center font-bold text-xs"
+                              />
+                            </td>
+                            <td className="p-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveOrdenItem(item.id)}
+                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                title="Eliminar partida"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* BOTONES DE ACCIÓN */}
+                <div className="flex flex-wrap items-center gap-3 justify-end border-t border-slate-200 pt-6">
+                  <button
+                    type="submit"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Check size={16} />
+                    <span>{editingOrdenId ? 'Guardar Cambios' : 'Guardar Órden de Reparación'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tempOrd: OrdenReparacion = {
+                        id: editingOrdenId || `ord-${Date.now()}`,
+                        numero: ordNumero,
+                        fecha: ordFecha,
+                        asesor: ordAsesor,
+                        tecnico: ordTecnico,
+                        rotacionAireLlantas: ordRotacionAireLlantas,
+                        revLimpiaParabrisas: ordRevLimpiaParabrisas,
+                        revLucesNivelesEngral: ordRevLucesNivelesEngral,
+                        clienteNombre: ordClienteNombre,
+                        clienteCalle: ordClienteCalle,
+                        clienteCpColonia: ordClienteCpColonia,
+                        clienteAlcaldia: ordClienteAlcaldia,
+                        clienteTelefono: ordClienteTelefono,
+                        marcaMotor: ordMarcaMotor,
+                        modeloColor: ordModeloColor,
+                        matriculaVin: ordMatriculaVin,
+                        kilometros: ordKilometros,
+                        items: ordItems,
+                        status: 'En Proceso',
+                        createdAt: new Date().toISOString()
+                      };
+                      downloadSaeOrdenDeReparacionPdf(tempOrd);
+                    }}
+                    className="bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Download size={16} />
+                    <span>Descargar PDF</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tempOrd: OrdenReparacion = {
+                        id: editingOrdenId || `ord-${Date.now()}`,
+                        numero: ordNumero,
+                        fecha: ordFecha,
+                        asesor: ordAsesor,
+                        tecnico: ordTecnico,
+                        rotacionAireLlantas: ordRotacionAireLlantas,
+                        revLimpiaParabrisas: ordRevLimpiaParabrisas,
+                        revLucesNivelesEngral: ordRevLucesNivelesEngral,
+                        clienteNombre: ordClienteNombre,
+                        clienteCalle: ordClienteCalle,
+                        clienteCpColonia: ordClienteCpColonia,
+                        clienteAlcaldia: ordClienteAlcaldia,
+                        clienteTelefono: ordClienteTelefono,
+                        marcaMotor: ordMarcaMotor,
+                        modeloColor: ordModeloColor,
+                        matriculaVin: ordMatriculaVin,
+                        kilometros: ordKilometros,
+                        items: ordItems,
+                        status: 'En Proceso',
+                        createdAt: new Date().toISOString()
+                      };
+                      handleSendOrdenWhatsApp(tempOrd);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Send size={16} />
+                    <span>Enviar por WhatsApp</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: HISTORIAL DE ÓRDENES */}
+          {ordenSubTab === 'historial' && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <History className="text-amber-600" size={20} />
+                    Historial de Órdenes de Reparación Registradas
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Listado completo de órdenes de trabajo capturadas en el sistema.
+                  </p>
+                </div>
+
+                {/* BUSCADOR */}
+                <div className="relative min-w-[260px]">
+                  <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={ordSearchQuery}
+                    onChange={(e) => setOrdSearchQuery(e.target.value)}
+                    placeholder="Buscar por cliente, folio o placas..."
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* TABLA DE HISTORIAL */}
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                      <th className="p-3">Folio</th>
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Cliente</th>
+                      <th className="p-3">Vehículo</th>
+                      <th className="p-3">Técnico</th>
+                      <th className="p-3 text-center">Partidas</th>
+                      <th className="p-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ordenesReparacion.filter(o => 
+                      !ordSearchQuery ||
+                      o.numero.toLowerCase().includes(ordSearchQuery.toLowerCase()) ||
+                      o.clienteNombre.toLowerCase().includes(ordSearchQuery.toLowerCase()) ||
+                      o.matriculaVin.toLowerCase().includes(ordSearchQuery.toLowerCase())
+                    ).map((ord) => (
+                      <tr key={ord.id} className="border-b border-slate-100 hover:bg-amber-50/40 transition-colors">
+                        <td className="p-3 font-mono font-bold text-red-700">#{ord.numero}</td>
+                        <td className="p-3 text-slate-600">{ord.fecha}</td>
+                        <td className="p-3 font-bold text-slate-800">{ord.clienteNombre}</td>
+                        <td className="p-3 text-slate-600">{ord.marcaMotor} ({ord.matriculaVin})</td>
+                        <td className="p-3 text-slate-600">{ord.tecnico}</td>
+                        <td className="p-3 text-center font-bold text-slate-700">{ord.items.length}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleEditOrdenFromList(ord)}
+                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="Editar Órden"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => downloadSaeOrdenDeReparacionPdf(ord)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Descargar PDF"
+                            >
+                              <Download size={15} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSendOrdenWhatsApp(ord)}
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Enviar por WhatsApp"
+                            >
+                              <Send size={15} />
+                            </button>
+
+                            {deleteOrdenReparacion && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`¿Eliminar la Órden de Reparación #${ord.numero}?`)) {
+                                    deleteOrdenReparacion(ord.id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {ordenesReparacion.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                          No hay órdenes de reparación registradas aún. Registra una nueva usando el formulario arriba.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* AGENDA & WORKSHOP BAYS TAB */}
       {activeTab === 'agenda' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -3196,26 +4173,26 @@ export default function AdvisorDashboard({
                   </div>
 
                   {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
-                  <div className="bg-slate-950/40 border border-amber-500/20 rounded-xl p-3.5 space-y-2.5 text-xs shadow-md">
-                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-600">
-                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                  <div className="bg-amber-100/80 border-2 border-amber-300 rounded-xl p-3.5 space-y-2.5 text-xs shadow-sm">
+                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-900">
+                      <AlertTriangle size={14} className="text-amber-700 shrink-0" />
                       Nota Importante de WhatsApp
                     </p>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                    <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
                       Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
                     </p>
-                    <div className="pt-2 border-t border-slate-800 space-y-2 text-[11px]">
+                    <div className="pt-2 border-t border-amber-200/80 space-y-2 text-[11px]">
                       <div className="flex items-start gap-2.5">
-                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
-                        <div className="text-slate-300">
-                          <strong className="text-amber-600">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-600">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 border border-slate-700 px-1 py-0.5 rounded text-white font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                        <span className="bg-amber-600 text-white font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div className="text-slate-800 leading-normal">
+                          <strong className="text-amber-900 font-bold">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-800">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 text-white border border-slate-700 px-1 py-0.5 rounded font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
                         </div>
                       </div>
 
                       <div className="flex items-start gap-2.5">
-                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
-                        <div className="text-slate-300">
-                          <strong className="text-amber-600">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                        <span className="bg-amber-600 text-white font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div className="text-slate-800 leading-normal">
+                          <strong className="text-amber-900 font-bold">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
                         </div>
                       </div>
                     </div>
@@ -3248,26 +4225,26 @@ export default function AdvisorDashboard({
                   </div>
 
                   {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
-                  <div className="bg-slate-950/40 border border-amber-500/20 rounded-xl p-3.5 space-y-2.5 text-xs shadow-md">
-                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-600">
-                      <AlertTriangle size={13} className="text-amber-600 shrink-0" />
+                  <div className="bg-amber-100/80 border-2 border-amber-300 rounded-xl p-3.5 space-y-2.5 text-xs shadow-sm">
+                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-900">
+                      <AlertTriangle size={14} className="text-amber-700 shrink-0" />
                       Nota Importante de WhatsApp
                     </p>
-                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                    <p className="text-[11px] text-slate-800 leading-relaxed font-medium">
                       Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
                     </p>
-                    <div className="pt-2 border-t border-slate-800 space-y-2 text-[11px]">
+                    <div className="pt-2 border-t border-amber-200/80 space-y-2 text-[11px]">
                       <div className="flex items-start gap-2.5">
-                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
-                        <div className="text-slate-300">
-                          <strong className="text-amber-600">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-650">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 border border-slate-700 px-1 py-0.5 rounded text-white font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                        <span className="bg-amber-600 text-white font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div className="text-slate-800 leading-normal">
+                          <strong className="text-amber-900 font-bold">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-800">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 text-white border border-slate-700 px-1 py-0.5 rounded font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
                         </div>
                       </div>
 
                       <div className="flex items-start gap-2.5">
-                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
-                        <div className="text-slate-300">
-                          <strong className="text-amber-600">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                        <span className="bg-amber-600 text-white font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div className="text-slate-800 leading-normal">
+                          <strong className="text-amber-900 font-bold">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
                         </div>
                       </div>
                     </div>

@@ -9,7 +9,7 @@ import {
   Shield, User, Wrench, Package, Car, Laptop, Clock, 
   Settings, CheckCircle2, ChevronRight, Menu, HelpCircle, AlertTriangle,
   Smartphone, Download, X, Home, LogOut, TrendingUp, DollarSign, Users,
-  FileText, Calendar, History, ListFilter, BellRing, Database, Cloud, RefreshCw
+  FileText, Calendar, History, ListFilter, BellRing, Database, Cloud, RefreshCw, ClipboardList
 } from 'lucide-react';
 import { useWorkshopState } from './useWorkshopState';
 import { UserRole } from './types';
@@ -35,6 +35,7 @@ export default function App() {
     settings,
     setSettings,
     presupuestos,
+    ordenesReparacion,
     
     // Supabase Sync State & Actions
     isSyncing,
@@ -72,6 +73,9 @@ export default function App() {
     addPresupuesto,
     updatePresupuesto,
     deletePresupuesto,
+    addOrdenReparacion,
+    updateOrdenReparacion,
+    deleteOrdenReparacion,
     convertPresupuestoToOrder,
     resetDatabase
   } = useWorkshopState();
@@ -92,7 +96,7 @@ export default function App() {
   const [adminTab, setAdminTab] = useState<'metrics' | 'finances' | 'personnel' | 'config'>(() => {
     return (localStorage.getItem('sae_admin_tab') as any) || 'metrics';
   });
-  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'agenda' | 'crm'>(() => {
+  const [advisorTab, setAdvisorTab] = useState<'reception' | 'quotes' | 'ordenes_reparacion' | 'agenda' | 'crm'>(() => {
     return (localStorage.getItem('sae_advisor_tab') as any) || 'reception';
   });
   const [mechanicTab, setMechanicTab] = useState<'tasks' | 'diagnostics' | 'parts'>(() => {
@@ -147,7 +151,8 @@ export default function App() {
       case 'advisor':
         return [
           { id: 'reception', label: 'Recepción', icon: Car },
-          { id: 'quotes', label: 'Cotizaciones', icon: FileText },
+          { id: 'quotes', label: 'Presupuestos', icon: FileText },
+          { id: 'ordenes_reparacion', label: 'Órdenes de Reparación', icon: ClipboardList },
           { id: 'agenda', label: 'Agenda', icon: Calendar },
           { id: 'crm', label: 'CRM', icon: History },
         ];
@@ -522,6 +527,7 @@ export default function App() {
                     inventory={inventory}
                     orders={orders}
                     presupuestos={presupuestos}
+                    ordenesReparacion={ordenesReparacion}
                     addClient={addClient}
                     updateClient={updateClient}
                     addVehicle={addVehicle}
@@ -535,6 +541,9 @@ export default function App() {
                     addPresupuesto={addPresupuesto}
                     updatePresupuesto={updatePresupuesto}
                     deletePresupuesto={deletePresupuesto}
+                    addOrdenReparacion={addOrdenReparacion}
+                    updateOrdenReparacion={updateOrdenReparacion}
+                    deleteOrdenReparacion={deleteOrdenReparacion}
                     convertPresupuestoToOrder={convertPresupuestoToOrder}
                     activeTab={advisorTab}
                     setActiveTab={setAdvisorTab}

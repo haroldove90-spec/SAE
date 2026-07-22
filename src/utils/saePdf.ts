@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ServiceOrder, Client, Vehicle, Employee, Presupuesto } from '../types';
+import { ServiceOrder, Client, Vehicle, Employee, Presupuesto, OrdenReparacion } from '../types';
 
 /**
  * Returns the raw HTML string representing the official SAE Presupuesto form,
@@ -738,6 +738,195 @@ export async function shareSaePresupuestoMobile(presupuesto: Presupuesto): Promi
     return false;
   } catch (error) {
     console.error('Error sharing Presupuesto mobile:', error);
+    return false;
+  }
+}
+
+/**
+ * Returns the raw HTML string representing the official SAE Orden de Reparación form,
+ * matching the paper document.
+ */
+export function getSaeOrdenDeReparacionHtml(orden: OrdenReparacion): string {
+  const crimson = '#A21C26';
+
+  return `
+    <!-- Top Bar with Notice and Title -->
+    <div style="display: flex !important; justify-content: space-between !important; align-items: flex-start !important; margin-bottom: 12px !important; border-bottom: 2px solid ${crimson} !important; padding-bottom: 10px !important; background-color: transparent !important;">
+      
+      <!-- Red Notice Box matching paper document -->
+      <div style="border: 2px solid ${crimson} !important; background-color: #FFF5F5 !important; padding: 8px 12px !important; border-radius: 6px !important; max-width: 360px !important; font-size: 8.5px !important; font-weight: 800 !important; color: ${crimson} !important; line-height: 1.3 !important; text-transform: uppercase !important;">
+        RECUERDA QUE LAS REFACCIONES QUE SE UTILICEN DEBEN SER ANOTADAS AL REVERZO DE LA HOJA, LAS QUE SE COMPRARON Y LAS QUE SE EXTRAJERON DEL ALMACEN.
+      </div>
+
+      <!-- Workshop Info & Title -->
+      <div style="text-align: right !important; font-size: 9.5px !important; color: #1F2937 !important; line-height: 1.3 !important;">
+        <div style="font-weight: 900 !important; font-size: 22px !important; color: ${crimson} !important; letter-spacing: 0.5px !important;">
+          ORDEN DE REPARACIÓN
+        </div>
+        <div style="font-weight: 800 !important; font-size: 13px !important; color: #111827 !important; margin-top: 2px !important;">
+          Número: <span style="color: ${crimson} !important;">${orden.numero}</span> &nbsp;&nbsp;|&nbsp;&nbsp; Fecha: <span>${orden.fecha}</span>
+        </div>
+        <div style="font-weight: 600 !important; margin-top: 2px !important;">Mixtecas Mz.52 Lt.17 Esquina Rey Tepalcatzin</div>
+        <div>Col. Ajusco Alcaldía Coyoacán C.P. 04300 C.D.M.X.</div>
+        <div style="font-weight: 700 !important; color: #111827 !important;">Tel: 55 4632 6652 y 55 3917 7754 Cel: 55 1384 6680</div>
+        <div style="font-weight: 700 !important; color: ${crimson} !important; margin-top: 2px !important;">Atención Personal: ${orden.asesor || 'Alberto Flores Hdz.'}</div>
+      </div>
+    </div>
+
+    <!-- Vehicle & Client Main Header Card -->
+    <div style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; margin-bottom: 12px !important; border: 1.5px solid #D1D5DB !important; border-radius: 8px !important; padding: 10px 12px !important; background-color: #FAFAFA !important; font-size: 11px !important; color: #111827 !important;">
+      <!-- Column 1: Client Info -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong style="color: #111827 !important;">CLIENTE:</strong> <span style="font-weight: 700 !important; color: #111827 !important;">${orden.clienteNombre}</span></div>
+        <div><strong>Calle:</strong> ${orden.clienteCalle || ''}</div>
+        <div><strong>C.P./Colonia:</strong> ${orden.clienteCpColonia || ''}</div>
+        <div><strong>Alcaldía:</strong> ${orden.clienteAlcaldia || ''}</div>
+        <div><strong>Teléfono:</strong> ${orden.clienteTelefono || ''}</div>
+      </div>
+
+      <!-- Column 2: Vehicle Info -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong>Matrícula / VIN:</strong> <strong style="color: ${crimson} !important;">${orden.matriculaVin}</strong></div>
+        <div><strong>Marca/Motor:</strong> ${orden.marcaMotor}</div>
+        <div><strong>Modelo/Color:</strong> ${orden.modeloColor}</div>
+        <div><strong>Kilómetros:</strong> ${orden.kilometros ? orden.kilometros.toLocaleString() : ''} Kms.</div>
+      </div>
+    </div>
+
+    <!-- Quality Check & Revisions Section -->
+    <div style="margin-bottom: 12px !important; border: 1px solid #CBD5E1 !important; border-radius: 6px !important; padding: 8px 12px !important; background-color: #F8FAFC !important; font-size: 9.5px !important; font-weight: 700 !important; color: #334155 !important; display: flex !important; flex-direction: column !important; gap: 6px !important;">
+      <div style="display: flex !important; justify-content: space-between !important; border-bottom: 1px dashed #CBD5E1 !important; padding-bottom: 4px !important;">
+        <span>ROTACIÓN Y PRESIÓN DE AIRE A LLANTAS:</span>
+        <span style="color: #0F172A !important; font-weight: 800 !important;">${orden.rotacionAireLlantas || '_____________________________________'}</span>
+      </div>
+      <div style="display: flex !important; justify-content: space-between !important; border-bottom: 1px dashed #CBD5E1 !important; padding-bottom: 4px !important;">
+        <span>REV. LIMPIA PARABRISAS Y CHISGUETEROS:</span>
+        <span style="color: #0F172A !important; font-weight: 800 !important;">${orden.revLimpiaParabrisas || '_____________________________________'}</span>
+      </div>
+      <div style="display: flex !important; justify-content: space-between !important;">
+        <span>REV. DE LUCES Y NIVELES EN GENERAL:</span>
+        <span style="color: #0F172A !important; font-weight: 800 !important;">${orden.revLucesNivelesEngral || '_____________________________________'}</span>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <div style="margin-bottom: 15px !important; border: 1.5px solid #1E293B !important; border-radius: 6px !important; overflow: hidden !important;">
+      <table style="width: 100% !important; border-collapse: collapse !important; font-size: 10px !important;">
+        <thead>
+          <tr style="background-color: #1E293B !important; color: #FFFFFF !important; font-weight: 800 !important; text-transform: uppercase !important;">
+            <th style="padding: 6px 8px !important; text-align: left !important; width: 80px !important; border-right: 1px solid #334155 !important;">Marca</th>
+            <th style="padding: 6px 8px !important; text-align: left !important; border-right: 1px solid #334155 !important;">Repuestos / Trabajos</th>
+            <th style="padding: 6px 8px !important; text-align: center !important; width: 60px !important;">Cant.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orden.items.map((item, idx) => `
+            <tr style="border-bottom: 1px solid #E2E8F0 !important; background-color: ${idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'} !important; color: #0F172A !important;">
+              <td style="padding: 5px 8px !important; font-weight: 700 !important; font-family: monospace !important; border-right: 1px solid #E2E8F0 !important;">${item.codigo || ''}</td>
+              <td style="padding: 5px 8px !important; border-right: 1px solid #E2E8F0 !important;">${item.descripcion}</td>
+              <td style="padding: 5px 8px !important; text-align: center !important; font-weight: 800 !important;">${item.cantidad}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Signatures -->
+    <div style="margin-top: 25px !important; display: flex !important; justify-content: space-between !important; align-items: flex-end !important; font-size: 11px !important; font-weight: 800 !important; color: #0F172A !important; padding-top: 15px !important;">
+      <div>
+        <span>TECNICO: </span>
+        <span style="border-bottom: 1.5px solid #0F172A !important; padding-bottom: 2px !important; display: inline-block !important; width: 280px !important;">
+          ${orden.tecnico || ''}
+        </span>
+      </div>
+      <div>
+        <span>ASESOR / RECEPCIÓN: </span>
+        <span style="border-bottom: 1.5px solid #0F172A !important; padding-bottom: 2px !important; display: inline-block !important; width: 200px !important; text-align: center !important;">
+          ${orden.asesor || 'Alberto Flores Hdz.'}
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+export async function generateSaeOrdenDeReparacionPdfBlob(orden: OrdenReparacion): Promise<Blob | null> {
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.width = '210mm';
+  container.style.padding = '12mm';
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.fontFamily = "'Arial', sans-serif";
+  container.innerHTML = getSaeOrdenDeReparacionHtml(orden);
+
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 10;
+
+    pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+    return pdf.output('blob');
+  } catch (error) {
+    console.error('Error generating Orden de Reparación PDF blob:', error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+export async function downloadSaeOrdenDeReparacionPdf(orden: OrdenReparacion): Promise<void> {
+  const pdfBlob = await generateSaeOrdenDeReparacionPdfBlob(orden);
+  if (!pdfBlob) return;
+  const url = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Orden_de_Reparacion_SAE_Numero_${orden.numero}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function shareSaeOrdenDeReparacionMobile(orden: OrdenReparacion): Promise<boolean> {
+  try {
+    const pdfBlob = await generateSaeOrdenDeReparacionPdfBlob(orden);
+    if (!pdfBlob) return false;
+    const file = new File(
+      [pdfBlob],
+      `Orden_de_Reparacion_SAE_Numero_${orden.numero}.pdf`,
+      { type: 'application/pdf' }
+    );
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `Órden de Reparación SAE Número ${orden.numero}`,
+        text: `Te compartimos la Órden de Reparación oficial de tu vehículo en Servicio Automotriz Especializado (SAE).`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sharing Orden de Reparación mobile:', error);
     return false;
   }
 }

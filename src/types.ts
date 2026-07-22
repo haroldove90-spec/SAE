@@ -176,6 +176,51 @@ export interface Presupuesto {
   status: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Convertido';
 }
 
+export interface OrdenReparacionItem {
+  id: string;
+  codigo?: string;
+  descripcion: string;
+  cantidad: number;
+}
+
+export interface OrdenReparacion {
+  id: string;
+  numero: string; // e.g. "180"
+  fecha: string; // e.g. "07/07/2026"
+  asesor: string; // e.g. "Alberto Flores Hdz."
+  
+  // Quality and revision checks matching paper
+  rotacionAireLlantas?: string;
+  revLimpiaParabrisas?: string;
+  revLucesNivelesEngral?: string;
+  tecnico?: string;
+
+  // Datos del Cliente
+  clienteNombre: string;
+  clienteCalle: string;
+  clienteCpColonia: string;
+  clienteAlcaldia: string;
+  clienteTelefono: string;
+  
+  // Datos del Vehículo
+  marcaMotor: string; // e.g. "FORD-RANGER / 2.3L"
+  modeloColor: string; // e.g. "2012 / BLANCO"
+  matriculaVin: string; // e.g. "865-XXJ / 8AFER5AD8C6453240"
+  kilometros: number;
+  
+  // Items / Desglose
+  items: OrdenReparacionItem[];
+  
+  notas?: string;
+  
+  clientId?: string;
+  vehicleId?: string;
+  serviceOrderId?: string;
+  
+  createdAt: string;
+  status: 'En Proceso' | 'Completada' | 'Entregada' | 'Cancelada';
+}
+
 export interface TimeLog {
   action: 'start' | 'pause' | 'resume' | 'stop';
   timestamp: string;
