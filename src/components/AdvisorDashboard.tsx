@@ -2334,13 +2334,13 @@ export default function AdvisorDashboard({
           {presupuestoSubTab === 'formulario' && (
             <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
               {/* TOP ACTIONS & PRESET LOADER BAR */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900 p-4 rounded-xl border border-zinc-800 shadow-md">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
-                    <FileText className="text-amber-600" size={20} />
+                  <h3 className="font-bold text-white text-base font-display flex items-center gap-2">
+                    <FileText className="text-amber-500" size={20} />
                     {editingPresupuestoId ? `Editando Presupuesto #${presNumero}` : 'Registrar Nuevo Presupuesto de Servicio'}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-zinc-400 mt-0.5">
                     Captura los datos del cliente, vehículo y desglose de refacciones o reparaciones.
                   </p>
                 </div>
@@ -2349,9 +2349,9 @@ export default function AdvisorDashboard({
                   <button
                     type="button"
                     onClick={handleAutoFillPresupuestoFromSelection}
-                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
                   >
-                    <User size={14} className="text-amber-600" />
+                    <User size={14} className="text-amber-400" />
                     <span>Cargar de Cliente/Auto Seleccionado</span>
                   </button>
 
@@ -2368,7 +2368,7 @@ export default function AdvisorDashboard({
                     <button
                       type="button"
                       onClick={handleResetPresupuestoForm}
-                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all"
                     >
                       Cancelar Edición
                     </button>
@@ -2379,20 +2379,20 @@ export default function AdvisorDashboard({
               {/* FORMULARIO PRESUPUESTO */}
               <form onSubmit={handleSavePresupuesto} className="space-y-6">
                 {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO */}
-                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-700/80 space-y-3 shadow-lg">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
-                      <Search size={14} className="text-amber-600" />
+                    <label className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-400" />
                       Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
                     </label>
-                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-500/30">
                       {clients.length} clientes en base de datos
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Cliente Registrado</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Cliente Registrado</label>
                       <select
                         value={selectedClientForPresupuesto?.id || ''}
                         onChange={(e) => {
@@ -2404,7 +2404,7 @@ export default function AdvisorDashboard({
                             setSelectedVehicleForPresupuesto(null);
                           }
                         }}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
                         <option value="">-- Buscar o seleccionar cliente registrado --</option>
                         {clients.map(c => (
@@ -2416,7 +2416,7 @@ export default function AdvisorDashboard({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Vehículo del Cliente</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Vehículo del Cliente</label>
                       <select
                         value={selectedVehicleForPresupuesto?.id || ''}
                         onChange={(e) => {
@@ -2428,7 +2428,7 @@ export default function AdvisorDashboard({
                           }
                         }}
                         disabled={!selectedClientForPresupuesto}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-zinc-900/60 disabled:text-zinc-500 disabled:border-zinc-800"
                       >
                         {!selectedClientForPresupuesto ? (
                           <option value="">-- Primero selecciona un cliente arriba --</option>
@@ -3357,13 +3357,13 @@ export default function AdvisorDashboard({
           {ordenSubTab === 'formulario' && (
             <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
               {/* HEADER ACTIONS BAR */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900 p-4 rounded-xl border border-zinc-800 shadow-md">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
-                    <ClipboardList className="text-amber-600" size={20} />
+                  <h3 className="font-bold text-white text-base font-display flex items-center gap-2">
+                    <ClipboardList className="text-amber-500" size={20} />
                     {editingOrdenId ? `Editando Órden de Reparación #${ordNumero}` : 'Nueva Órden de Reparación'}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-zinc-400 mt-0.5">
                     Registra la información completa del cliente, vehículo, revisiones generales y trabajos requeridos.
                   </p>
                 </div>
@@ -3382,7 +3382,7 @@ export default function AdvisorDashboard({
                     <button
                       type="button"
                       onClick={handleResetOrdenForm}
-                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                     >
                       Cancelar Edición
                     </button>
@@ -3393,20 +3393,20 @@ export default function AdvisorDashboard({
               {/* FORMULARIO */}
               <form onSubmit={handleSaveOrdenReparacion} className="space-y-6">
                 {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO */}
-                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-700/80 space-y-3 shadow-lg">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
-                      <Search size={14} className="text-amber-600" />
+                    <label className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-400" />
                       Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
                     </label>
-                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-500/30">
                       {clients.length} clientes en base de datos
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Cliente Registrado</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Cliente Registrado</label>
                       <select
                         value={selectedClientForOrden?.id || ''}
                         onChange={(e) => {
@@ -3418,7 +3418,7 @@ export default function AdvisorDashboard({
                             setSelectedVehicleForOrden(null);
                           }
                         }}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
                         <option value="">-- Buscar o seleccionar cliente registrado --</option>
                         {clients.map(c => (
@@ -3430,7 +3430,7 @@ export default function AdvisorDashboard({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-bold mb-1">Vehículo del Cliente</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Vehículo del Cliente</label>
                       <select
                         value={selectedVehicleForOrden?.id || ''}
                         onChange={(e) => {
@@ -3442,7 +3442,7 @@ export default function AdvisorDashboard({
                           }
                         }}
                         disabled={!selectedClientForOrden}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-zinc-900/60 disabled:text-zinc-500 disabled:border-zinc-800"
                       >
                         {!selectedClientForOrden ? (
                           <option value="">-- Primero selecciona un cliente arriba --</option>
@@ -4004,13 +4004,13 @@ export default function AdvisorDashboard({
           {salidaSubTab === 'formulario' && (
             <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
               {/* CABECERA CON ACCIONES RÁPIDAS Y CARGA DE MUESTRA */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-zinc-900 p-4 rounded-xl border border-zinc-800 shadow-md">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
-                    <LogOut className="text-amber-600" size={20} />
+                  <h3 className="font-bold text-white text-base font-display flex items-center gap-2">
+                    <LogOut className="text-amber-500" size={20} />
                     {editingSalidaId ? `Editando Nota de Salida #${salNumero}` : 'Registrar Nueva Nota de Salida / Liquidación'}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-zinc-400 mt-0.5">
                     Genera la Nota de Salida con datos del cliente, vehículo, liquidación de trabajos y garantía.
                   </p>
                 </div>
@@ -4029,7 +4029,7 @@ export default function AdvisorDashboard({
                     <button
                       type="button"
                       onClick={handleResetSalidaForm}
-                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer"
                     >
                       Cancelar Edición
                     </button>
@@ -4039,135 +4039,21 @@ export default function AdvisorDashboard({
 
               {/* FORMULARIO NOTA DE SALIDA */}
               <form onSubmit={handleSaveNotaSalida} className="space-y-6">
-                {/* BUSCADOR Y SELECTOR INTERACTIVO DE CLIENTE REGISTRADO */}
-                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-xs font-black text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
-                      <Search size={14} className="text-amber-600" />
-                      Buscar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
-                    </label>
-                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
-                      {clients.length} clientes en base de datos
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block text-[10px] text-slate-600 font-bold mb-1">Cliente Registrado</label>
-                      <select
-                        value={selectedClientForSalida?.id || ''}
-                        onChange={(e) => {
-                          const found = clients.find(c => c.id === e.target.value);
-                          if (found) {
-                            selectClientForSalida(found);
-                          } else {
-                            setSelectedClientForSalida(null);
-                            setSelectedVehicleForSalida(null);
-                          }
-                        }}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                      >
-                        <option value="">-- Buscar o seleccionar cliente registrado --</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} {c.phone ? `(${c.phone})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] text-slate-600 font-bold mb-1">Vehículo del Cliente</label>
-                      <select
-                        value={selectedVehicleForSalida?.id || ''}
-                        onChange={(e) => {
-                          const found = vehicles.find(v => v.id === e.target.value);
-                          if (found) {
-                            selectVehicleForSalida(found);
-                          } else {
-                            setSelectedVehicleForSalida(null);
-                          }
-                        }}
-                        disabled={!selectedClientForSalida}
-                        className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-slate-800 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-100 disabled:opacity-60"
-                      >
-                        {!selectedClientForSalida ? (
-                          <option value="">-- Primero selecciona un cliente arriba --</option>
-                        ) : (
-                          <>
-                            <option value="">-- Seleccionar vehículo de {selectedClientForSalida.name} ({vehicles.filter(v => v.ownerId === selectedClientForSalida.id).length}) --</option>
-                            {vehicles.filter(v => v.ownerId === selectedClientForSalida.id).map(v => (
-                              <option key={v.id} value={v.id}>
-                                {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
-                              </option>
-                            ))}
-                          </>
-                        )}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CABECERA FOLIO, FECHA, ASESOR Y ORDEN DE SERVICIO */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Nota de Salida #</label>
-                    <input
-                      type="text"
-                      required
-                      value={salNumero}
-                      onChange={(e) => setSalNumero(e.target.value)}
-                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-amber-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Fecha de Emisión</label>
-                    <input
-                      type="text"
-                      required
-                      value={salFecha}
-                      onChange={(e) => setSalFecha(e.target.value)}
-                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold"
-                      placeholder="DD/MM/AAAA"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Asesor Responsable</label>
-                    <input
-                      type="text"
-                      required
-                      value={salAsesor}
-                      onChange={(e) => setSalAsesor(e.target.value)}
-                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-bold mb-1">Orden de Servicio #</label>
-                    <input
-                      type="text"
-                      value={salOrdenServicioNumero}
-                      onChange={(e) => setSalOrdenServicioNumero(e.target.value)}
-                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-slate-800"
-                      placeholder="Ej. 378A"
-                    />
-                  </div>
-                </div>
-
                 {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO PARA NOTA DE SALIDA */}
-                <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/30 space-y-3">
+                <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-700/80 space-y-3 shadow-lg">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
-                      <Search size={14} className="text-amber-500" />
+                      <Search size={14} className="text-amber-400" />
                       Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
                     </label>
-                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-2.5 py-1 rounded-md border border-amber-500/30">
                       {clients.length} clientes en base de datos
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-[10px] text-slate-400 font-bold mb-1">Nombre del Cliente</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Nombre del Cliente</label>
                       <select
                         value={selectedClientForSalida?.id || ''}
                         onChange={(e) => {
@@ -4179,7 +4065,7 @@ export default function AdvisorDashboard({
                             setSelectedVehicleForSalida(null);
                           }
                         }}
-                        className="w-full p-2.5 bg-slate-900 border border-amber-500/50 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                       >
                         <option value="">-- Buscar o seleccionar cliente registrado --</option>
                         {clients.map(c => (
@@ -4191,7 +4077,7 @@ export default function AdvisorDashboard({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] text-slate-400 font-bold mb-1">Vehículo Asignado al Cliente</label>
+                      <label className="block text-[11px] text-zinc-300 font-bold mb-1 uppercase tracking-wider">Vehículo Asignado al Cliente</label>
                       <select
                         value={selectedVehicleForSalida?.id || ''}
                         onChange={(e) => {
@@ -4203,7 +4089,7 @@ export default function AdvisorDashboard({
                           }
                         }}
                         disabled={!selectedClientForSalida}
-                        className="w-full p-2.5 bg-slate-900 border border-amber-500/50 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-800 disabled:opacity-60"
+                        className="w-full p-2.5 bg-zinc-950 border border-zinc-700 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-zinc-900/60 disabled:text-zinc-500 disabled:border-zinc-800"
                       >
                         {!selectedClientForSalida ? (
                           <option value="">-- Primero selecciona un cliente arriba --</option>
@@ -4219,6 +4105,51 @@ export default function AdvisorDashboard({
                         )}
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                {/* CABECERA FOLIO, FECHA, ASESOR Y ORDEN DE SERVICIO */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-xs shadow-md">
+                  <div>
+                    <label className="block text-zinc-300 font-bold mb-1 uppercase tracking-wider text-[10px]">Nota de Salida #</label>
+                    <input
+                      type="text"
+                      required
+                      value={salNumero}
+                      onChange={(e) => setSalNumero(e.target.value)}
+                      className="w-full p-2 border border-zinc-700 rounded-lg bg-zinc-950 font-mono font-bold text-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-300 font-bold mb-1 uppercase tracking-wider text-[10px]">Fecha de Emisión</label>
+                    <input
+                      type="text"
+                      required
+                      value={salFecha}
+                      onChange={(e) => setSalFecha(e.target.value)}
+                      className="w-full p-2 border border-zinc-700 rounded-lg bg-zinc-950 font-semibold text-white"
+                      placeholder="DD/MM/AAAA"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-300 font-bold mb-1 uppercase tracking-wider text-[10px]">Asesor Responsable</label>
+                    <input
+                      type="text"
+                      required
+                      value={salAsesor}
+                      onChange={(e) => setSalAsesor(e.target.value)}
+                      className="w-full p-2 border border-zinc-700 rounded-lg bg-zinc-950 font-semibold text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-300 font-bold mb-1 uppercase tracking-wider text-[10px]">Orden de Servicio #</label>
+                    <input
+                      type="text"
+                      value={salOrdenServicioNumero}
+                      onChange={(e) => setSalOrdenServicioNumero(e.target.value)}
+                      className="w-full p-2 border border-zinc-700 rounded-lg bg-zinc-950 font-mono font-bold text-amber-400"
+                      placeholder="Ej. 378A"
+                    />
                   </div>
                 </div>
 
