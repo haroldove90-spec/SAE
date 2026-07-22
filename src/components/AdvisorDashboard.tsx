@@ -496,7 +496,7 @@ export default function AdvisorDashboard({
     setPresClienteAlcaldia(client.alcaldia || '');
     setPresClienteTelefono(client.phone || client.telFijo || '');
 
-    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id || (v as any).clientId === client.id);
     if (clientVehicles.length > 0) {
       selectVehicleForPresupuesto(clientVehicles[0]);
     } else {
@@ -555,7 +555,7 @@ export default function AdvisorDashboard({
     setOrdClienteAlcaldia(client.alcaldia || '');
     setOrdClienteTelefono(client.phone || client.telFijo || '');
 
-    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id || (v as any).clientId === client.id);
     if (clientVehicles.length > 0) {
       selectVehicleForOrden(clientVehicles[0]);
     } else {
@@ -805,7 +805,7 @@ export default function AdvisorDashboard({
     setSalClienteAlcaldia(client.alcaldia || '');
     setSalClienteTelefono(client.phone || client.telFijo || '');
 
-    const clientVehicles = vehicles.filter(v => v.ownerId === client.id);
+    const clientVehicles = vehicles.filter(v => v.ownerId === client.id || (v as any).clientId === client.id);
     if (clientVehicles.length > 0) {
       selectVehicleForSalida(clientVehicles[0]);
     } else {
@@ -2434,8 +2434,8 @@ export default function AdvisorDashboard({
                           <option value="">-- Primero selecciona un cliente arriba --</option>
                         ) : (
                           <>
-                            <option value="">-- Seleccionar vehículo de {selectedClientForPresupuesto.name} ({vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id).length}) --</option>
-                            {vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id).map(v => (
+                            <option value="">-- Seleccionar vehículo de {selectedClientForPresupuesto.name} ({vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id || (v as any).clientId === selectedClientForPresupuesto.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForPresupuesto.id || (v as any).clientId === selectedClientForPresupuesto.id).map(v => (
                               <option key={v.id} value={v.id}>
                                 {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
                               </option>
@@ -3448,8 +3448,8 @@ export default function AdvisorDashboard({
                           <option value="">-- Primero selecciona un cliente arriba --</option>
                         ) : (
                           <>
-                            <option value="">-- Seleccionar vehículo de {selectedClientForOrden.name} ({vehicles.filter(v => v.ownerId === selectedClientForOrden.id).length}) --</option>
-                            {vehicles.filter(v => v.ownerId === selectedClientForOrden.id).map(v => (
+                            <option value="">-- Seleccionar vehículo de {selectedClientForOrden.name} ({vehicles.filter(v => v.ownerId === selectedClientForOrden.id || (v as any).clientId === selectedClientForOrden.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForOrden.id || (v as any).clientId === selectedClientForOrden.id).map(v => (
                               <option key={v.id} value={v.id}>
                                 {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
                               </option>
@@ -4150,6 +4150,75 @@ export default function AdvisorDashboard({
                       className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-slate-800"
                       placeholder="Ej. 378A"
                     />
+                  </div>
+                </div>
+
+                {/* SELECTOR INTERACTIVO DE CLIENTE Y VEHÍCULO PARA NOTA DE SALIDA */}
+                <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/30 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-black text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Search size={14} className="text-amber-500" />
+                      Seleccionar Cliente Registrado (Muestra Automáticamente sus Datos y Vehículos)
+                    </label>
+                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                      {clients.length} clientes en base de datos
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold mb-1">Nombre del Cliente</label>
+                      <select
+                        value={selectedClientForSalida?.id || ''}
+                        onChange={(e) => {
+                          const found = clients.find(c => c.id === e.target.value);
+                          if (found) {
+                            selectClientForSalida(found);
+                          } else {
+                            setSelectedClientForSalida(null);
+                            setSelectedVehicleForSalida(null);
+                          }
+                        }}
+                        className="w-full p-2.5 bg-slate-900 border border-amber-500/50 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                      >
+                        <option value="">-- Buscar o seleccionar cliente registrado --</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.phone ? `(${c.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold mb-1">Vehículo Asignado al Cliente</label>
+                      <select
+                        value={selectedVehicleForSalida?.id || ''}
+                        onChange={(e) => {
+                          const found = vehicles.find(v => v.id === e.target.value);
+                          if (found) {
+                            selectVehicleForSalida(found);
+                          } else {
+                            setSelectedVehicleForSalida(null);
+                          }
+                        }}
+                        disabled={!selectedClientForSalida}
+                        className="w-full p-2.5 bg-slate-900 border border-amber-500/50 rounded-lg text-white font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none disabled:bg-slate-800 disabled:opacity-60"
+                      >
+                        {!selectedClientForSalida ? (
+                          <option value="">-- Primero selecciona un cliente arriba --</option>
+                        ) : (
+                          <>
+                            <option value="">-- Seleccionar vehículo de {selectedClientForSalida.name} ({vehicles.filter(v => v.ownerId === selectedClientForSalida.id || (v as any).clientId === selectedClientForSalida.id).length}) --</option>
+                            {vehicles.filter(v => v.ownerId === selectedClientForSalida.id || (v as any).clientId === selectedClientForSalida.id).map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.brand} {v.model} ({v.year}) - Placa: {v.plate || 'S/P'} | VIN: {v.vin || v.serie || 'S/N'}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
