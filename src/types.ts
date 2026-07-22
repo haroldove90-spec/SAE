@@ -129,6 +129,53 @@ export interface BudgetLineItem {
   approved: boolean | null; // null = Pending, true = Approved, false = Rejected
 }
 
+export interface PresupuestoItem {
+  id: string;
+  codigo?: string;
+  descripcion: string;
+  cantidad: number;
+  importeUnitario: number;
+  total: number;
+}
+
+export interface Presupuesto {
+  id: string;
+  numero: string; // Folio de presupuesto e.g. "202"
+  fecha: string; // e.g. "07/07/2026"
+  asesor: string; // e.g. "Alberto Flores Hdz."
+  
+  // Datos del Cliente
+  clienteNombre: string;
+  clienteCalle: string;
+  clienteCpColonia: string;
+  clienteAlcaldia: string;
+  clienteTelefono: string;
+  
+  // Datos del Vehículo
+  marcaMotor: string; // e.g. "FORD-RANGER / 2.3L"
+  modeloColor: string; // e.g. "2012 / BLANCO"
+  matriculaVin: string; // e.g. "865-XXJ / 8AFER5AD8C6453240"
+  kilometros: number;
+  
+  // Items / Conceptos
+  items: PresupuestoItem[];
+  
+  // Pago, Validez y Totales
+  formaPago: string; // "CONTADO" | "TARJETA" | "TRANSFERENCIA" | "CRÉDITO"
+  total: number;
+  validezDias: number; // 12
+  diasEntrega?: number;
+  notas?: string;
+  
+  // Opcionales para vinculación
+  clientId?: string;
+  vehicleId?: string;
+  serviceOrderId?: string;
+  
+  createdAt: string;
+  status: 'Borrador' | 'Enviado' | 'Aprobado' | 'Rechazado' | 'Convertido';
+}
+
 export interface TimeLog {
   action: 'start' | 'pause' | 'resume' | 'stop';
   timestamp: string;

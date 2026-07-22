@@ -34,6 +34,7 @@ export default function App() {
     transactions,
     settings,
     setSettings,
+    presupuestos,
     
     // Supabase Sync State & Actions
     isSyncing,
@@ -68,6 +69,10 @@ export default function App() {
     registerOrderPayment,
     handleClientCreditPayment,
     addSupplier,
+    addPresupuesto,
+    updatePresupuesto,
+    deletePresupuesto,
+    convertPresupuestoToOrder,
     resetDatabase
   } = useWorkshopState();
 
@@ -516,6 +521,7 @@ export default function App() {
                     employees={employees}
                     inventory={inventory}
                     orders={orders}
+                    presupuestos={presupuestos}
                     addClient={addClient}
                     updateClient={updateClient}
                     addVehicle={addVehicle}
@@ -526,6 +532,10 @@ export default function App() {
                     approveBudgetLine={approveBudgetLine}
                     registerOrderPayment={registerOrderPayment}
                     updateOrderStatus={updateOrderStatus}
+                    addPresupuesto={addPresupuesto}
+                    updatePresupuesto={updatePresupuesto}
+                    deletePresupuesto={deletePresupuesto}
+                    convertPresupuestoToOrder={convertPresupuestoToOrder}
                     activeTab={advisorTab}
                     setActiveTab={setAdvisorTab}
                   />

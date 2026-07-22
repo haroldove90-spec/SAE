@@ -1,4 +1,4 @@
-import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder } from './types';
+import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, Presupuesto } from './types';
 
 export const INITIAL_CLIENTS: Client[] = [
   {
@@ -609,3 +609,48 @@ export const INITIAL_SETTINGS: WorkshopSettings = {
   taxRate: 16, // IVA 16% México
   bankDetails: 'Banco BBVA Bancomer • Beneficiario: Servicio Automotriz Especializado S.A. de C.V. • Cuenta: 0123 4567 8901 • CLABE: 0121 8000 1234 5678 90'
 };
+
+export const INITIAL_PRESUPUESTOS: Presupuesto[] = [
+  {
+    id: 'pres-202',
+    numero: '202',
+    fecha: '07/07/2026',
+    asesor: 'Alberto Flores Hdz.',
+    clienteNombre: 'Congregación de la misión',
+    clienteCalle: 'Av.San Fernando #154',
+    clienteCpColonia: '14000 Tlalpan Centro',
+    clienteAlcaldia: 'Tlalpan',
+    clienteTelefono: '73 5266 8332',
+    marcaMotor: 'FORD-RANGER / 2.3L',
+    modeloColor: '2012 / BLANCO',
+    matriculaVin: '865-XXJ / 8AFER5AD8C6453240',
+    kilometros: 161282,
+    formaPago: 'CONTADO',
+    validezDias: 12,
+    diasEntrega: 3,
+    notas: 'DOCUMENTO SIN VALOR FISCAL. COSTOS APROXIMADOS POR POSIBLES PARTES EXTRAS DAÑADAS.',
+    total: 34773.00,
+    createdAt: '2026-07-07T10:00:00.000Z',
+    status: 'Enviado',
+    items: [
+      { id: 'pi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1, importeUnitario: 3850.00, total: 3850.00 },
+      { id: 'pi-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1, importeUnitario: 350.00, total: 350.00 },
+      { id: 'pi-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1, importeUnitario: 1700.00, total: 1700.00 },
+      { id: 'pi-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'pi-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2, importeUnitario: 1350.00, total: 2700.00 },
+      { id: 'pi-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2, importeUnitario: 975.00, total: 1950.00 },
+      { id: 'pi-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2, importeUnitario: 713.00, total: 1426.00 },
+      { id: 'pi-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2, importeUnitario: 580.00, total: 1160.00 },
+      { id: 'pi-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1, importeUnitario: 850.00, total: 850.00 },
+      { id: 'pi-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4, importeUnitario: 240.00, total: 960.00 },
+      { id: 'pi-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 3800.00, total: 3800.00 },
+      { id: 'pi-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1, importeUnitario: 950.00, total: 950.00 },
+      { id: 'pi-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2, importeUnitario: 280.00, total: 560.00 },
+      { id: 'pi-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 450.00, total: 450.00 },
+      { id: 'pi-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'pi-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4, importeUnitario: 298.00, total: 1192.00 },
+      { id: 'pi-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1, importeUnitario: 6500.00, total: 6500.00 },
+      { id: 'pi-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1, importeUnitario: 3975.00, total: 3975.00 }
+    ]
+  }
+];

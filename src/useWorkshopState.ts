@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, OrderStatus, BudgetLineItem, TimeLog } from './types';
+import { Client, Vehicle, Employee, InventoryItem, Supplier, ServiceOrder, Transaction, WorkshopSettings, PartRequisition, PurchaseOrder, OrderStatus, BudgetLineItem, TimeLog, Presupuesto } from './types';
 import { 
   INITIAL_CLIENTS, 
   INITIAL_VEHICLES, 
@@ -10,7 +10,8 @@ import {
   INITIAL_REQUISITIONS, 
   INITIAL_ORDERS, 
   INITIAL_TRANSACTIONS, 
-  INITIAL_SETTINGS 
+  INITIAL_SETTINGS,
+  INITIAL_PRESUPUESTOS
 } from './mockData';
 import { supabase } from './lib/supabase';
 
@@ -32,6 +33,7 @@ export function useWorkshopState() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [requisitions, setRequisitions] = useState<PartRequisition[]>([]);
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
+  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<WorkshopSettings>(INITIAL_SETTINGS);
   const [loaded, setLoaded] = useState(false);
@@ -52,6 +54,7 @@ export function useWorkshopState() {
       const localPurchaseOrders = localStorage.getItem('wt_purchase_orders');
       const localRequisitions = localStorage.getItem('wt_requisitions');
       const localOrders = localStorage.getItem('wt_orders');
+      const localPresupuestos = localStorage.getItem('wt_presupuestos');
       const localTransactions = localStorage.getItem('wt_transactions');
       const localSettings = localStorage.getItem('wt_settings');
 
@@ -63,6 +66,7 @@ export function useWorkshopState() {
       setPurchaseOrders(localPurchaseOrders ? sortNewestFirst(JSON.parse(localPurchaseOrders)) : sortNewestFirst(INITIAL_PURCHASE_ORDERS));
       setRequisitions(localRequisitions ? sortNewestFirst(JSON.parse(localRequisitions)) : sortNewestFirst(INITIAL_REQUISITIONS));
       setOrders(localOrders ? sortNewestFirst(JSON.parse(localOrders)) : sortNewestFirst(INITIAL_ORDERS));
+      setPresupuestos(localPresupuestos ? sortNewestFirst(JSON.parse(localPresupuestos)) : sortNewestFirst(INITIAL_PRESUPUESTOS));
       setTransactions(localTransactions ? sortNewestFirst(JSON.parse(localTransactions)) : sortNewestFirst(INITIAL_TRANSACTIONS));
       
       let parsedSettings = localSettings ? JSON.parse(localSettings) : INITIAL_SETTINGS;
@@ -301,6 +305,11 @@ export function useWorkshopState() {
       safeUpsert('service_orders', orders);
     }
   }, [orders, loaded, supabaseConnected]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    localStorage.setItem('wt_presupuestos', JSON.stringify(presupuestos));
+  }, [presupuestos, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -736,6 +745,124 @@ export function useWorkshopState() {
     setSuppliers(prev => [newSupplier, ...prev]);
   };
 
+  // 7. Presupuestos (Budgets / Estimates)
+  const addPresupuesto = (p: Omit<Presupuesto, 'id' | 'createdAt'>): Presupuesto => {
+    const newId = `pres-${Date.now()}`;
+    const newPresupuesto: Presupuesto = {
+      ...p,
+      id: newId,
+      createdAt: new Date().toISOString()
+    };
+    setPresupuestos(prev => [newPresupuesto, ...prev]);
+    return newPresupuesto;
+  };
+
+  const updatePresupuesto = (updated: Presupuesto) => {
+    setPresupuestos(prev => prev.map(p => p.id === updated.id ? updated : p));
+  };
+
+  const deletePresupuesto = (id: string) => {
+    setPresupuestos(prev => prev.filter(p => p.id !== id));
+  };
+
+  const convertPresupuestoToOrder = (presupuestoId: string): ServiceOrder | null => {
+    const pres = presupuestos.find(p => p.id === presupuestoId);
+    if (!pres) return null;
+
+    // 1. Find or create client
+    let client = clients.find(c => c.name.toLowerCase() === pres.clienteNombre.toLowerCase() || (pres.clienteTelefono && c.phone === pres.clienteTelefono));
+    let clientId = client ? client.id : '';
+    if (!client) {
+      const newClient = addClient({
+        name: pres.clienteNombre || 'Cliente Presupuesto',
+        phone: pres.clienteTelefono || '55-0000-0000',
+        email: 'cliente@ejemplo.com',
+        address: pres.clienteCalle || 'CDMX',
+        creditLimit: 0,
+        calle: pres.clienteCalle,
+        cp: pres.clienteCpColonia.split(' ')[0] || '',
+        colonia: pres.clienteCpColonia,
+        alcaldia: pres.clienteAlcaldia
+      });
+      clientId = newClient.id;
+    }
+
+    // 2. Find or create vehicle
+    let vehicle = vehicles.find(v => (v.plate && pres.matriculaVin && pres.matriculaVin.includes(v.plate)) || v.ownerId === clientId);
+    let vehicleId = vehicle ? vehicle.id : '';
+    if (!vehicle) {
+      const parts = pres.marcaMotor.split('/');
+      const brand = parts[0]?.trim() || 'Desconocida';
+      const newVeh = addVehicle({
+        ownerId: clientId,
+        brand,
+        model: pres.modeloColor.split('/')[0]?.trim() || 'Modelo',
+        year: 2020,
+        plate: pres.matriculaVin.split('/')[0]?.trim() || 'SIN-PLACA',
+        vin: pres.matriculaVin.split('/')[1]?.trim() || 'VIN-000',
+        mileage: pres.kilometros || 0,
+        color: pres.modeloColor.split('/')[1]?.trim() || 'Blanco',
+        engomadoColor: 'pink',
+        plateEnding: '8'
+      });
+      vehicleId = newVeh.id;
+    }
+
+    // 3. Create Service Order with items
+    const newId = `OS-${1000 + orders.length + 1}`;
+    const budgetItems: BudgetLineItem[] = pres.items.map((item, idx) => ({
+      id: `bli-${idx + 1}`,
+      type: item.descripcion.toLowerCase().includes('mano de obra') ? 'mano_de_obra' : 'refaccion',
+      description: item.descripcion,
+      qty: item.cantidad,
+      unitPrice: item.importeUnitario,
+      approved: true
+    }));
+
+    const newOrder: ServiceOrder = {
+      id: newId,
+      clientId,
+      vehicleId,
+      advisorId: 'emp-1',
+      mechanicId: 'emp-2',
+      reportedFailure: `Presupuesto Folio #${pres.numero}: ${pres.items.slice(0, 3).map(i => i.descripcion).join(', ')}`,
+      checklist: {
+        scratches: false,
+        dents: false,
+        fuelLevel: 50,
+        tools: true,
+        spareTire: true,
+        jack: true,
+        extinguisher: false,
+        photos: []
+      },
+      diagnostics: `Generado automáticamente a partir del Presupuesto #${pres.numero} (${pres.fecha})`,
+      diagnosticPhotos: [],
+      status: 'Diagnostico',
+      items: budgetItems,
+      timeLogs: [],
+      isClockedIn: false,
+      isPaused: false,
+      totalHoursWorked: 0,
+      dateOpened: new Date().toISOString().split('T')[0],
+      payments: [],
+      folio: pres.numero,
+      fecha: pres.fecha,
+      tecnico: pres.asesor
+    };
+
+    setOrders(prev => [newOrder, ...prev]);
+
+    // Mark budget as converted
+    updatePresupuesto({
+      ...pres,
+      status: 'Convertido',
+      serviceOrderId: newId
+    });
+
+    return newOrder;
+  };
+
   // Reset database to initial values
   const resetDatabase = () => {
     setClients(INITIAL_CLIENTS);
@@ -746,6 +873,7 @@ export function useWorkshopState() {
     setPurchaseOrders(INITIAL_PURCHASE_ORDERS);
     setRequisitions(INITIAL_REQUISITIONS);
     setOrders(INITIAL_ORDERS);
+    setPresupuestos(INITIAL_PRESUPUESTOS);
     setTransactions(INITIAL_TRANSACTIONS);
     setSettings(INITIAL_SETTINGS);
     
@@ -757,6 +885,7 @@ export function useWorkshopState() {
     localStorage.setItem('wt_purchase_orders', JSON.stringify(INITIAL_PURCHASE_ORDERS));
     localStorage.setItem('wt_requisitions', JSON.stringify(INITIAL_REQUISITIONS));
     localStorage.setItem('wt_orders', JSON.stringify(INITIAL_ORDERS));
+    localStorage.setItem('wt_presupuestos', JSON.stringify(INITIAL_PRESUPUESTOS));
     localStorage.setItem('wt_transactions', JSON.stringify(INITIAL_TRANSACTIONS));
     localStorage.setItem('wt_settings', JSON.stringify(INITIAL_SETTINGS));
   };
@@ -770,6 +899,7 @@ export function useWorkshopState() {
     purchaseOrders,
     requisitions,
     orders,
+    presupuestos,
     transactions,
     settings,
     setSettings,
@@ -807,6 +937,10 @@ export function useWorkshopState() {
     registerOrderPayment,
     handleClientCreditPayment,
     addSupplier,
+    addPresupuesto,
+    updatePresupuesto,
+    deletePresupuesto,
+    convertPresupuestoToOrder,
     resetDatabase
   };
 }

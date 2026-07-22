@@ -1,6 +1,131 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { ServiceOrder, Client, Vehicle, Employee } from '../types';
+import { ServiceOrder, Client, Vehicle, Employee, Presupuesto } from '../types';
+
+/**
+ * Returns the raw HTML string representing the official SAE Presupuesto form,
+ * styled exactly like the physical paper document.
+ */
+export function getSaePresupuestoHtml(presupuesto: Presupuesto): string {
+  const crimson = '#A21C26';
+
+  return `
+    <!-- Header Section -->
+    <div style="display: flex !important; justify-content: space-between !important; align-items: flex-start !important; margin-bottom: 15px !important; border-bottom: 2px solid ${crimson} !important; padding-bottom: 12px !important; background-color: transparent !important;">
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important; background-color: transparent !important;">
+        <!-- SAE Logo -->
+        <div style="display: flex !important; align-items: center !important; gap: 10px !important;">
+          <div style="font-family: 'Inter', sans-serif !important; font-weight: 900 !important; font-style: italic !important; font-size: 38px !important; color: ${crimson} !important; letter-spacing: -2px !important; line-height: 1 !important;">
+            SAE
+          </div>
+          <div style="font-size: 10px !important; color: ${crimson} !important; font-weight: 700 !important;">
+            Servicio Automotriz Especializado
+          </div>
+        </div>
+        <div style="font-weight: 900 !important; font-size: 26px !important; color: ${crimson} !important; tracking: 1px !important; margin-top: 4px !important;">
+          PRESUPUESTO
+        </div>
+      </div>
+
+      <!-- Workshop Info & Folio -->
+      <div style="text-align: right !important; font-size: 9.5px !important; color: #1F2937 !important; line-height: 1.3 !important;">
+        <div style="font-weight: 600 !important;">Mixtecas Mz.52 Lt.17 Esquina Rey Tepalcatzin</div>
+        <div>Col. Ajusco Alcaldia Coyoacan C.P.04300 C.D.M.X.</div>
+        <div style="font-weight: 700 !important; color: #111827 !important; margin-top: 2px !important;">Tel: 55 4632 6652 y 55 3917 7754 Cel: 55 1384 6680</div>
+        <div style="font-weight: 700 !important; color: ${crimson} !important; margin-top: 2px !important;">Atención Personal: ${presupuesto.asesor || 'Alberto Flores Hdz.'}</div>
+        <div style="font-weight: 800 !important; font-size: 10px !important; color: #111827 !important;">Asesor De Servicios</div>
+        
+        <div style="display: flex !important; justify-content: flex-end !important; gap: 15px !important; margin-top: 8px !important; font-size: 12px !important; font-weight: 900 !important;">
+          <span>Número: <strong style="color: ${crimson} !important; font-size: 14px !important;">${presupuesto.numero}</strong></span>
+          <span>Fecha: <strong style="color: #111827 !important;">${presupuesto.fecha}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cliente & Vehiculo Header Grid -->
+    <div style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 15px !important; margin-bottom: 12px !important; border: 1.5px solid #D1D5DB !important; border-radius: 8px !important; padding: 10px 12px !important; background-color: #FAFAFA !important; font-size: 11px !important; color: #111827 !important;">
+      <!-- Column 1: Cliente -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong style="color: #111827 !important;">CLIENTE:</strong> <span style="font-weight: 700 !important; color: #111827 !important;">${presupuesto.clienteNombre}</span></div>
+        <div><strong>Calle:</strong> ${presupuesto.clienteCalle}</div>
+        <div><strong>C.P./Colonia:</strong> ${presupuesto.clienteCpColonia}</div>
+        <div><strong>Alcaldia:</strong> ${presupuesto.clienteAlcaldia}</div>
+        <div><strong>Telefono:</strong> ${presupuesto.clienteTelefono}</div>
+      </div>
+
+      <!-- Column 2: Vehículo -->
+      <div style="display: flex !important; flex-direction: column !important; gap: 4px !important;">
+        <div><strong>Marca/Mot:</strong> ${presupuesto.marcaMotor}</div>
+        <div><strong>Modelo/Color:</strong> ${presupuesto.modeloColor}</div>
+        <div><strong>Matrícula:</strong> <strong style="color: #111827 !important;">${presupuesto.matriculaVin}</strong></div>
+        <div><strong>Kilometros:</strong> ${presupuesto.kilometros ? presupuesto.kilometros.toLocaleString() : ''}</div>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <div style="margin-bottom: 12px !important; border: 1.5px solid #1E293B !important; border-radius: 6px !important; overflow: hidden !important;">
+      <table style="width: 100% !important; border-collapse: collapse !important; font-size: 10px !important;">
+        <thead>
+          <tr style="background-color: #1E293B !important; color: #FFFFFF !important; font-weight: 800 !important; text-transform: uppercase !important;">
+            <th style="padding: 6px 8px !important; text-align: left !important; width: 70px !important; border-right: 1px solid #334155 !important;">Código</th>
+            <th style="padding: 6px 8px !important; text-align: left !important; border-right: 1px solid #334155 !important;">Repuestos / Servicios</th>
+            <th style="padding: 6px 8px !important; text-align: center !important; width: 50px !important; border-right: 1px solid #334155 !important;">Cant.</th>
+            <th style="padding: 6px 8px !important; text-align: right !important; width: 80px !important; border-right: 1px solid #334155 !important;">Imp. U</th>
+            <th style="padding: 6px 8px !important; text-align: right !important; width: 90px !important;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${presupuesto.items.map((item, idx) => `
+            <tr style="border-bottom: 1px solid #E2E8F0 !important; background-color: ${idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'} !important; color: #0F172A !important;">
+              <td style="padding: 5px 8px !important; font-weight: 700 !important; font-family: monospace !important; border-right: 1px solid #E2E8F0 !important;">${item.codigo || ''}</td>
+              <td style="padding: 5px 8px !important; border-right: 1px solid #E2E8F0 !important;">${item.descripcion}</td>
+              <td style="padding: 5px 8px !important; text-align: center !important; font-weight: 700 !important; border-right: 1px solid #E2E8F0 !important;">${item.cantidad}</td>
+              <td style="padding: 5px 8px !important; text-align: right !important; border-right: 1px solid #E2E8F0 !important;">${item.importeUnitario.toFixed(2)}</td>
+              <td style="padding: 5px 8px !important; text-align: right !important; font-weight: 800 !important;">${item.total.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer & Totals -->
+    <div style="display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 15px !important; margin-bottom: 12px !important;">
+      <div style="font-size: 10px !important; color: #1E293B !important; line-height: 1.4 !important; flex: 1 !important;">
+        <div><strong>FORMA DE PAGO:</strong> ${presupuesto.formaPago || 'CONTADO'}</div>
+        <div style="font-weight: 900 !important; color: ${crimson} !important; margin-top: 2px !important;">***DOCUMENTO SIN VALOR FISCAL***</div>
+        <div style="font-weight: 800 !important; color: #475569 !important; font-size: 9px !important; margin-top: 1px !important;">
+          NOTA: ESTOS COSTOS SON APROXIMADOS POR POSIBLES PARTES EXTRAS DAÑADAS
+        </div>
+      </div>
+
+      <!-- Total Box -->
+      <div style="border: 2px solid #1E293B !important; border-radius: 6px !important; overflow: hidden !important; min-width: 180px !important; text-align: right !important;">
+        <div style="background-color: #1E293B !important; color: #FFFFFF !important; font-weight: 900 !important; font-size: 11px !important; padding: 4px 10px !important; text-align: center !important; text-transform: uppercase !important;">
+          Total
+        </div>
+        <div style="padding: 8px 12px !important; font-size: 18px !important; font-weight: 900 !important; color: #0F172A !important; font-family: monospace !important; background-color: #F1F5F9 !important;">
+          $${presupuesto.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      </div>
+    </div>
+
+    <!-- Terms & Signatures -->
+    <div style="display: grid !important; grid-template-columns: 1.2fr 1fr 1.2fr !important; gap: 8px !important; border-top: 1.5px solid #CBD5E1 !important; pt: 8px !important; font-size: 8.5px !important; color: #334155 !important;">
+      <div style="border: 1px solid #CBD5E1 !important; border-radius: 4px !important; padding: 6px !important; background-color: #F8FAFC !important;">
+        <strong style="color: #0F172A !important; display: block !important; margin-bottom: 2px !important;">VALIDEZ DEL PRESUPUESTO</strong>
+        ESTE PRESUPUESTO TIENE UNA VALIDEZ DE ${presupuesto.validezDias || 12} DÍAS HÁBILES. SE ENTREGARÁ EL VEHÍCULO PASADOS ${presupuesto.diasEntrega || '___'} DÍAS. ACEPTO EL PRESUPUESTO.
+      </div>
+      <div style="border: 1px solid #CBD5E1 !important; border-radius: 4px !important; padding: 6px !important; background-color: #F8FAFC !important;">
+        <strong style="color: #0F172A !important; display: block !important; margin-bottom: 2px !important;">PIEZAS SUSTITUIDAS</strong>
+        Renuncio a recoger las piezas sustituidas a mi vehículo.
+      </div>
+      <div style="border: 1px solid #CBD5E1 !important; border-radius: 4px !important; padding: 6px !important; background-color: #F8FAFC !important;">
+        <strong style="color: #0F172A !important; display: block !important; margin-bottom: 2px !important;">CONFORMIDAD DEL CLIENTE</strong>
+        El cliente declara conocer y aceptar el contenido del presupuesto, firmando este documento como prueba de su plena conformidad.
+      </div>
+    </div>
+  `;
+}
 
 /**
  * Returns the raw HTML string representing the official SAE reception form,
@@ -523,6 +648,96 @@ export async function shareSaeOrderMobile(
     return false;
   } catch (error) {
     console.error('Error using Web Share API:', error);
+    return false;
+  }
+}
+
+export async function generateSaePresupuestoPdfBlob(presupuesto: Presupuesto): Promise<Blob | null> {
+  const container = document.createElement('div');
+  container.id = 'sae-pdf-render-root-presupuesto';
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.width = '800px';
+  container.style.padding = '35px 40px';
+  container.style.backgroundColor = '#FFFFFF';
+  container.style.color = '#111827';
+  container.style.fontFamily = '"Inter", sans-serif';
+  container.style.fontSize = '11px';
+  container.style.lineHeight = '1.4';
+  container.style.zIndex = '-9999';
+  container.style.opacity = '0.99';
+  container.style.pointerEvents = 'none';
+
+  container.innerHTML = getSaePresupuestoHtml(presupuesto);
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#FFFFFF',
+      logging: false
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 10;
+
+    pdf.addImage(imgData, 'JPEG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+    return pdf.output('blob');
+  } catch (error) {
+    console.error('Error generating Presupuesto PDF blob:', error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+export async function downloadSaePresupuestoPdf(presupuesto: Presupuesto): Promise<void> {
+  const pdfBlob = await generateSaePresupuestoPdfBlob(presupuesto);
+  if (!pdfBlob) return;
+  const url = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Presupuesto_SAE_Folio_${presupuesto.numero}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export async function shareSaePresupuestoMobile(presupuesto: Presupuesto): Promise<boolean> {
+  try {
+    const pdfBlob = await generateSaePresupuestoPdfBlob(presupuesto);
+    if (!pdfBlob) return false;
+    const file = new File(
+      [pdfBlob],
+      `Presupuesto_SAE_Folio_${presupuesto.numero}.pdf`,
+      { type: 'application/pdf' }
+    );
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: `Presupuesto SAE Folio ${presupuesto.numero}`,
+        text: `Te compartimos el Presupuesto oficial de tu vehículo en Servicio Automotriz Especializado (SAE).`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error sharing Presupuesto mobile:', error);
     return false;
   }
 }

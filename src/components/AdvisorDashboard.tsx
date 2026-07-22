@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, UserPlus, Car, CheckSquare, Calendar, History, Send, 
-  Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck,
+  Trash, Check, X, FileText, ChevronRight, AlertCircle, MapPin, Sparkles, UserCheck, User,
   Camera, Upload, Trash2, AlertTriangle, Download, Sparkle, Copy, Image, Share2, Mail,
-  HelpCircle
+  HelpCircle, Printer, RefreshCw, Edit2, Eye, DollarSign
 } from 'lucide-react';
-import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist } from '../types';
+import { Client, Vehicle, Employee, InventoryItem, ServiceOrder, BudgetLineItem, OrderStatus, Checklist, Presupuesto, PresupuestoItem } from '../types';
 import { 
   generateSaePdf, 
   generateSaeImageBlob, 
   downloadSaeImage, 
   copySaeImageToClipboard, 
-  shareSaeOrderMobile 
+  shareSaeOrderMobile,
+  getSaePresupuestoHtml,
+  downloadSaePresupuestoPdf,
+  shareSaePresupuestoMobile
 } from '../utils/saePdf';
 import { SignaturePad } from './SignaturePad';
 
@@ -21,6 +24,7 @@ interface AdvisorDashboardProps {
   employees: Employee[];
   inventory: InventoryItem[];
   orders: ServiceOrder[];
+  presupuestos?: Presupuesto[];
   addClient: (c: Omit<Client, 'id' | 'creditBalance'>) => Client;
   updateClient: (c: Client) => void;
   addVehicle: (v: Omit<Vehicle, 'id'>) => Vehicle;
@@ -31,6 +35,10 @@ interface AdvisorDashboardProps {
   approveBudgetLine: (orderId: string, itemId: string, approved: boolean) => void;
   registerOrderPayment: (orderId: string, amount: number, method: 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'Credito') => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  addPresupuesto?: (p: Omit<Presupuesto, 'id' | 'createdAt'>) => Presupuesto;
+  updatePresupuesto?: (p: Presupuesto) => void;
+  deletePresupuesto?: (id: string) => void;
+  convertPresupuestoToOrder?: (id: string) => ServiceOrder | null;
   activeTab?: 'reception' | 'quotes' | 'agenda' | 'crm';
   setActiveTab?: (tab: 'reception' | 'quotes' | 'agenda' | 'crm') => void;
 }
@@ -41,6 +49,7 @@ export default function AdvisorDashboard({
   employees,
   inventory,
   orders,
+  presupuestos = [],
   addClient,
   updateClient,
   addVehicle,
@@ -51,6 +60,10 @@ export default function AdvisorDashboard({
   approveBudgetLine,
   registerOrderPayment,
   updateOrderStatus,
+  addPresupuesto,
+  updatePresupuesto,
+  deletePresupuesto,
+  convertPresupuestoToOrder,
   activeTab: controlledActiveTab,
   setActiveTab: controlledSetActiveTab
 }: AdvisorDashboardProps) {
@@ -207,6 +220,247 @@ export default function AdvisorDashboard({
       setOrderVehPlate('');
     }
   }, [selectedVehicleId, vehicles]);
+
+  // Presupuesto State & Handlers
+  const [presupuestoSubTab, setPresupuestoSubTab] = useState<'formulario' | 'historial' | 'ordenes'>('formulario');
+  const [editingPresupuestoId, setEditingPresupuestoId] = useState<string | null>(null);
+
+  const [presNumero, setPresNumero] = useState(() => (202 + (presupuestos?.length || 0) + 1).toString());
+  const [presFecha, setPresFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [presAsesor, setPresAsesor] = useState('Alberto Flores Hdz.');
+  
+  const [presClienteNombre, setPresClienteNombre] = useState('');
+  const [presClienteCalle, setPresClienteCalle] = useState('');
+  const [presClienteCpColonia, setPresClienteCpColonia] = useState('');
+  const [presClienteAlcaldia, setPresClienteAlcaldia] = useState('');
+  const [presClienteTelefono, setPresClienteTelefono] = useState('');
+  
+  const [presMarcaMotor, setPresMarcaMotor] = useState('');
+  const [presModeloColor, setPresModeloColor] = useState('');
+  const [presMatriculaVin, setPresMatriculaVin] = useState('');
+  const [presKilometros, setPresKilometros] = useState<number>(0);
+  
+  const [presItems, setPresItems] = useState<PresupuestoItem[]>([
+    { id: 'pi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado', cantidad: 1, importeUnitario: 3850, total: 3850 }
+  ]);
+  
+  const [presFormaPago, setPresFormaPago] = useState('CONTADO');
+  const [presValidezDias, setPresValidezDias] = useState(12);
+  const [presDiasEntrega, setPresDiasEntrega] = useState(3);
+  const [presNotas, setPresNotas] = useState('DOCUMENTO SIN VALOR FISCAL. COSTOS APROXIMADOS POR POSIBLES PARTES EXTRAS DAÑADAS.');
+  
+  const [presSearchQuery, setPresSearchQuery] = useState('');
+  const [presSuccessMessage, setPresSuccessMessage] = useState<string | null>(null);
+
+  // Auto-populate Presupuesto from active client/vehicle selector
+  const handleAutoFillPresupuestoFromSelection = () => {
+    if (selectedClientId) {
+      const c = clients.find(cl => cl.id === selectedClientId);
+      if (c) {
+        setPresClienteNombre(c.name);
+        setPresClienteCalle(c.calle || c.address || '');
+        setPresClienteCpColonia(`${c.cp || ''} ${c.colonia || ''}`.trim());
+        setPresClienteAlcaldia(c.alcaldia || '');
+        setPresClienteTelefono(c.phone || c.telFijo || '');
+      }
+    }
+    if (selectedVehicleId) {
+      const v = vehicles.find(veh => veh.id === selectedVehicleId);
+      if (v) {
+        setPresMarcaMotor(`${v.brand}-${v.model} / ${v.motor || 'Motor'}`);
+        setPresModeloColor(`${v.year} / ${v.color || 'Blanco'}`);
+        setPresMatriculaVin(`${v.plate || 'SIN-PLACA'} / ${v.vin || v.serie || 'SIN-VIN'}`);
+        setPresKilometros(v.mileage || 0);
+      }
+    }
+    setPresSuccessMessage('✅ Datos de Cliente y Vehículo cargados en el Presupuesto');
+    setTimeout(() => setPresSuccessMessage(null), 3000);
+  };
+
+  // Load exact sample budget from paper document
+  const handleLoadSamplePresupuestoPaperData = () => {
+    setPresNumero('202');
+    setPresFecha('07/07/2026');
+    setPresAsesor('Alberto Flores Hdz.');
+    setPresClienteNombre('Congregación de la misión');
+    setPresClienteCalle('Av.San Fernando #154');
+    setPresClienteCpColonia('14000 Tlalpan Centro');
+    setPresClienteAlcaldia('Tlalpan');
+    setPresClienteTelefono('73 5266 8332');
+    setPresMarcaMotor('FORD-RANGER / 2.3L');
+    setPresModeloColor('2012 / BLANCO');
+    setPresMatriculaVin('865-XXJ / 8AFER5AD8C6453240');
+    setPresKilometros(161282);
+    setPresFormaPago('CONTADO');
+    setPresValidezDias(12);
+    setPresDiasEntrega(3);
+    setPresItems([
+      { id: 'pi-1', codigo: '0266', descripcion: 'Servicio de mantenimiento mayor con aceite de motor multigrado, (camionetas de carga hasta 2500)', cantidad: 1, importeUnitario: 3850.00, total: 3850.00 },
+      { id: 'pi-2', codigo: '0242', descripcion: 'Solventes y materiales diversos', cantidad: 1, importeUnitario: 350.00, total: 350.00 },
+      { id: 'pi-3', codigo: '0105', descripcion: 'Prueba dinamica, prueba de monitores y verificación general.', cantidad: 1, importeUnitario: 1700.00, total: 1700.00 },
+      { id: 'pi-4', codigo: '', descripcion: 'Lavar y engrasar baleros delanteros', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'pi-5', codigo: '', descripcion: 'Amortiguadores delanteros', cantidad: 2, importeUnitario: 1350.00, total: 2700.00 },
+      { id: 'pi-6', codigo: '', descripcion: 'Bujes de horquillas inferiores', cantidad: 2, importeUnitario: 975.00, total: 1950.00 },
+      { id: 'pi-7', codigo: '', descripcion: 'Tornillos estabilizadores', cantidad: 2, importeUnitario: 713.00, total: 1426.00 },
+      { id: 'pi-8', codigo: '', descripcion: 'Gomas de barra estabilizadora', cantidad: 2, importeUnitario: 580.00, total: 1160.00 },
+      { id: 'pi-9', codigo: '0103', descripcion: 'Alineación a cuatro planos', cantidad: 1, importeUnitario: 850.00, total: 850.00 },
+      { id: 'pi-10', codigo: '0214', descripcion: 'Balanceo R/15 R/16 R17 R/18 Rin deportivo', cantidad: 4, importeUnitario: 240.00, total: 960.00 },
+      { id: 'pi-11', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 3800.00, total: 3800.00 },
+      { id: 'pi-12', codigo: '', descripcion: 'Tapon de deposito de anticongelante', cantidad: 1, importeUnitario: 950.00, total: 950.00 },
+      { id: 'pi-13', codigo: '0108', descripcion: 'Anticongelante concentrado', cantidad: 2, importeUnitario: 280.00, total: 560.00 },
+      { id: 'pi-14', codigo: '', descripcion: 'Mano de obra.', cantidad: 1, importeUnitario: 450.00, total: 450.00 },
+      { id: 'pi-15', codigo: '', descripcion: 'Sellar carter de diferencial', cantidad: 1, importeUnitario: 1200.00, total: 1200.00 },
+      { id: 'pi-16', codigo: '', descripcion: 'Aceite de diferencial', cantidad: 4, importeUnitario: 298.00, total: 1192.00 },
+      { id: 'pi-17', codigo: '', descripcion: 'Balancear cardan y cambiar cruzetas', cantidad: 1, importeUnitario: 6500.00, total: 6500.00 },
+      { id: 'pi-18', codigo: '', descripcion: 'Acumulador de energia LTH', cantidad: 1, importeUnitario: 3975.00, total: 3975.00 }
+    ]);
+    setPresSuccessMessage('📄 Presupuesto Folio 202 cargado correctamente desde el documento de muestra');
+    setTimeout(() => setPresSuccessMessage(null), 3000);
+  };
+
+  const handleAddPresupuestoItem = () => {
+    const newItem: PresupuestoItem = {
+      id: `pi-${Date.now()}`,
+      codigo: '',
+      descripcion: '',
+      cantidad: 1,
+      importeUnitario: 0,
+      total: 0
+    };
+    setPresItems(prev => [...prev, newItem]);
+  };
+
+  const handleUpdatePresupuestoItem = (id: string, field: keyof PresupuestoItem, val: any) => {
+    setPresItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: val };
+        if (field === 'cantidad' || field === 'importeUnitario') {
+          const qty = field === 'cantidad' ? (parseFloat(val) || 0) : item.cantidad;
+          const price = field === 'importeUnitario' ? (parseFloat(val) || 0) : item.importeUnitario;
+          updated.total = qty * price;
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
+  const handleRemovePresupuestoItem = (id: string) => {
+    setPresItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const presTotalCalculated = presItems.reduce((sum, item) => sum + (item.total || 0), 0);
+
+  const handleSavePresupuesto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!presClienteNombre.trim()) {
+      alert('Por favor ingresa el nombre del cliente');
+      return;
+    }
+
+    const payload = {
+      numero: presNumero,
+      fecha: presFecha,
+      asesor: presAsesor,
+      clienteNombre: presClienteNombre,
+      clienteCalle: presClienteCalle,
+      clienteCpColonia: presClienteCpColonia,
+      clienteAlcaldia: presClienteAlcaldia,
+      clienteTelefono: presClienteTelefono,
+      marcaMotor: presMarcaMotor,
+      modeloColor: presModeloColor,
+      matriculaVin: presMatriculaVin,
+      kilometros: presKilometros,
+      items: presItems,
+      formaPago: presFormaPago,
+      total: presTotalCalculated,
+      validezDias: presValidezDias,
+      diasEntrega: presDiasEntrega,
+      notas: presNotas,
+      status: 'Enviado' as const
+    };
+
+    if (editingPresupuestoId && updatePresupuesto) {
+      updatePresupuesto({
+        ...payload,
+        id: editingPresupuestoId,
+        createdAt: new Date().toISOString()
+      });
+      setPresSuccessMessage(`✅ Presupuesto #${presNumero} actualizado exitosamente.`);
+    } else if (addPresupuesto) {
+      addPresupuesto(payload);
+      setPresSuccessMessage(`🎉 Presupuesto #${presNumero} registrado correctamente en el historial.`);
+    }
+
+    setEditingPresupuestoId(null);
+    setTimeout(() => setPresSuccessMessage(null), 3000);
+  };
+
+  const handleEditPresupuestoFromList = (p: Presupuesto) => {
+    setEditingPresupuestoId(p.id);
+    setPresNumero(p.numero);
+    setPresFecha(p.fecha);
+    setPresAsesor(p.asesor || 'Alberto Flores Hdz.');
+    setPresClienteNombre(p.clienteNombre);
+    setPresClienteCalle(p.clienteCalle);
+    setPresClienteCpColonia(p.clienteCpColonia);
+    setPresClienteAlcaldia(p.clienteAlcaldia);
+    setPresClienteTelefono(p.clienteTelefono);
+    setPresMarcaMotor(p.marcaMotor);
+    setPresModeloColor(p.modeloColor);
+    setPresMatriculaVin(p.matriculaVin);
+    setPresKilometros(p.kilometros || 0);
+    setPresItems(p.items || []);
+    setPresFormaPago(p.formaPago || 'CONTADO');
+    setPresValidezDias(p.validezDias || 12);
+    setPresDiasEntrega(p.diasEntrega || 3);
+    setPresNotas(p.notas || '');
+    setPresupuestoSubTab('formulario');
+  };
+
+  const handleResetPresupuestoForm = () => {
+    setEditingPresupuestoId(null);
+    setPresNumero((202 + (presupuestos?.length || 0) + 1).toString());
+    setPresFecha(new Date().toISOString().split('T')[0]);
+    setPresClienteNombre('');
+    setPresClienteCalle('');
+    setPresClienteCpColonia('');
+    setPresClienteAlcaldia('');
+    setPresClienteTelefono('');
+    setPresMarcaMotor('');
+    setPresModeloColor('');
+    setPresMatriculaVin('');
+    setPresKilometros(0);
+    setPresItems([
+      { id: `pi-${Date.now()}`, codigo: '', descripcion: '', cantidad: 1, importeUnitario: 0, total: 0 }
+    ]);
+  };
+
+  const handleSendPresupuestoWhatsApp = (p: Presupuesto) => {
+    const rawPhone = (p.clienteTelefono || '').replace(/\D/g, '');
+    const phone = rawPhone.length === 10 ? `52${rawPhone}` : rawPhone;
+    
+    let text = `*SERVICIO AUTOMOTRIZ ESPECIALIZADO (SAE)*\n`;
+    text += `*PRESUPUESTO DE SERVICIO #${p.numero}*\n`;
+    text += `📅 Fecha: ${p.fecha}\n`;
+    text += `👤 Cliente: *${p.clienteNombre}*\n`;
+    text += `🚗 Vehículo: *${p.marcaMotor}* | Placas: *${p.matriculaVin}*\n`;
+    text += `------------------------------------\n`;
+    text += `*DESGLOSE DE CONCEPTOS / REFACCIONES:*\n`;
+    p.items.forEach((item, idx) => {
+      text += `${idx + 1}. ${item.descripcion} (${item.cantidad}x $${item.importeUnitario.toFixed(2)}) = *$${item.total.toFixed(2)}*\n`;
+    });
+    text += `------------------------------------\n`;
+    text += `💵 *TOTAL: $${p.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN*\n`;
+    text += `💳 Forma de Pago: ${p.formaPago}\n`;
+    text += `⏱️ Validez: ${p.validezDias} días hábiles\n`;
+    text += `Atención Personal: ${p.asesor}\n\n`;
+    text += `📌 _Si deseas autorizar este presupuesto o tienes dudas, puedes responder a este mensaje._`;
+
+    const encoded = encodeURIComponent(text);
+    const url = phone ? `https://wa.me/${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
+  };
 
   // Set default mechanic ID
   useEffect(() => {
@@ -1464,316 +1718,968 @@ export default function AdvisorDashboard({
             </div>
           )}
 
-      {/* ESTIMATES, QUOTES & BILLS TAB */}
+      {/* ESTIMATES & PRESUPUESTOS TAB */}
       {activeTab === 'quotes' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Active Orders List Sidebar */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-2 font-display">
-              Órdenes de Trabajo Activas
-            </h4>
-            <div className="space-y-2 max-h-[380px] overflow-y-auto">
-              {orders.map((o) => {
-                const client = clients.find(c => c.id === o.clientId);
-                const vehicle = vehicles.find(v => v.id === o.vehicleId);
-                return (
-                  <button
-                    key={o.id}
-                    onClick={() => {
-                      setSelectedOrderId(o.id);
-                      setPaymentAmount(0);
-                    }}
-                    className={`w-full text-left p-3 border rounded-xl text-xs transition-all ${
-                      selectedOrderId === o.id 
-                        ? 'border-amber-500 bg-amber-50/50 shadow-sm font-semibold' 
-                        : 'border-slate-100 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">{o.id}</span>
-                      <span className="text-[10px] text-slate-400">{o.dateOpened.split(' ')[0]}</span>
-                    </div>
-                    <p className="text-slate-800 font-bold">{client?.name}</p>
-                    <p className="text-slate-500">{vehicle?.brand} {vehicle?.model} • Placa: {vehicle?.plate}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        Estatus: <strong className="text-slate-600">{o.status.replace('_', ' ')}</strong>
-                      </span>
-                      <span className="font-bold text-indigo-600">${Math.round(getOrderTotal(o)).toLocaleString()} MXN</span>
-                    </div>
-                  </button>
-                );
-              })}
+        <div className="space-y-6">
+          {/* PRESUPUESTOS MODULE SUB-NAVIGATION */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPresupuestoSubTab('formulario')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  presupuestoSubTab === 'formulario'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Plus size={15} />
+                <span>Formulario Presupuesto (Hoja SAE)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPresupuestoSubTab('historial')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  presupuestoSubTab === 'historial'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <History size={15} />
+                <span>Historial de Registros ({presupuestos.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPresupuestoSubTab('ordenes')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  presupuestoSubTab === 'ordenes'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <FileText size={15} />
+                <span>Cotización por Órdenes Activas</span>
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium hidden sm:block">
+              Módulo Oficial Presupuestos SAE • Hoja de Cotizaciones
             </div>
           </div>
 
-          {/* QUOTE WORKSPACE / DETAILS */}
-          {activeQuoteOrder ? (
-            <div className="lg:col-span-2 space-y-6">
-              {/* Order Overview Header */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 font-display">
-                      Detalle de Orden: {activeQuoteOrder.id}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Cliente: <strong>{clients.find(c => c.id === activeQuoteOrder.clientId)?.name}</strong> • Auto: <strong>{vehicles.find(v => v.id === activeQuoteOrder.vehicleId)?.brand} {vehicles.find(v => v.id === activeQuoteOrder.vehicleId)?.model}</strong>
-                    </p>
-                  </div>
-                  <div>
-                    <select
-                      value={activeQuoteOrder.status}
-                      onChange={(e) => updateOrderStatus(activeQuoteOrder.id, e.target.value as any)}
-                      className="p-2 border border-amber-300 rounded-lg bg-amber-50 font-bold text-xs text-amber-800 focus:outline-amber-500"
-                    >
-                      <option value="Diagnostico">Fase: En Diagnóstico</option>
-                      <option value="Esperando_Refacciones">Fase: Esperando Refacciones</option>
-                      <option value="En_Reparacion">Fase: En Reparación</option>
-                      <option value="Control_Calidad">Fase: Control de Calidad</option>
-                      <option value="Listo_Entrega">Fase: Listo para Entrega</option>
-                    </select>
-                  </div>
-                </div>
+          {/* SUCCESS MESSAGE BANNER */}
+          {presSuccessMessage && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
+              <Check size={18} className="text-emerald-600 shrink-0" />
+              <span>{presSuccessMessage}</span>
+            </div>
+          )}
 
-                <div className="text-xs space-y-2">
-                  <p className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                    <strong className="text-slate-600 block mb-1">Motivo de Ingreso:</strong>
-                    {activeQuoteOrder.reportedFailure}
+          {/* SUB-TAB 1: FORMULARIO REGISTRO PRESUPUESTO */}
+          {presupuestoSubTab === 'formulario' && (
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md space-y-6">
+              {/* TOP ACTIONS & PRESET LOADER BAR */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200/60">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base font-display flex items-center gap-2">
+                    <FileText className="text-amber-600" size={20} />
+                    {editingPresupuestoId ? `Editando Presupuesto #${presNumero}` : 'Registrar Nuevo Presupuesto de Servicio'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Captura los datos del cliente, vehículo y desglose de refacciones o reparaciones.
                   </p>
-                  {activeQuoteOrder.diagnostics && (
-                    <p className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 text-slate-800">
-                      <strong className="text-amber-700 block mb-1">Diagnóstico Técnico:</strong>
-                      {activeQuoteOrder.diagnostics}
-                    </p>
-                  )}
                 </div>
 
-                {/* Simulated Digital Link Send */}
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   <button
                     type="button"
-                    onClick={() => {
-                      alert(`[WhatsApp API Link] Enviando presupuesto digital de la orden ${activeQuoteOrder.id} al cliente via WhatsApp.\nMensaje: Hola, te enviamos la cotización de tu auto para aprobación digital.\nLink: https://ais-pre-.../portal?order=${activeQuoteOrder.id}`);
-                    }}
-                    className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-all"
+                    onClick={handleAutoFillPresupuestoFromSelection}
+                    className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
                   >
-                    <Send size={12} />
-                    Compartir por WhatsApp
+                    <User size={14} className="text-amber-600" />
+                    <span>Cargar de Cliente/Auto Seleccionado</span>
                   </button>
-                  
+
                   <button
                     type="button"
-                    onClick={() => {
-                      alert(`[Email Sender] Enviando presupuesto a ${clients.find(c => c.id === activeQuoteOrder.clientId)?.email}`);
-                    }}
-                    className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 transition-all"
+                    onClick={handleLoadSamplePresupuestoPaperData}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
                   >
-                    Enviar por Correo
+                    <Sparkles size={14} />
+                    <span>Ejemplo Muestra Hoja SAE (Folio 202)</span>
                   </button>
+
+                  {editingPresupuestoId && (
+                    <button
+                      type="button"
+                      onClick={handleResetPresupuestoForm}
+                      className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      Cancelar Edición
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* BUDGET / ITEMS BUILDER */}
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <h4 className="font-bold text-slate-800 font-display">Desglose de Cotización</h4>
-
-                {/* Add item to quote form */}
-                <form onSubmit={handleAddItemToQuote} className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="sm:col-span-2">
-                    <label className="block text-[10px] text-slate-500 font-semibold mb-1">Tipo</label>
-                    <select
-                      value={newItemType}
-                      onChange={(e) => setNewItemType(e.target.value as any)}
-                      className="w-full p-2 border border-slate-200 rounded-lg bg-white"
-                    >
-                      <option value="refaccion">Refacción</option>
-                      <option value="mano_de_obra">Mano Obra</option>
-                    </select>
-                  </div>
-                  <div className="sm:col-span-5">
-                    <label className="block text-[10px] text-slate-500 font-semibold mb-1">Descripción de Partida</label>
+              {/* FORMULARIO PRESUPUESTO */}
+              <form onSubmit={handleSavePresupuesto} className="space-y-6">
+                {/* CABECERA FOLIO, FECHA & ASESOR */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80 text-xs">
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Folio del Presupuesto #</label>
                     <input
                       type="text"
                       required
-                      value={newItemDesc}
-                      onChange={(e) => setNewItemDesc(e.target.value)}
-                      placeholder="Ej. Cambio de Aceite Sintético..."
-                      className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                      value={presNumero}
+                      onChange={(e) => setPresNumero(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-mono font-bold text-amber-700"
                     />
                   </div>
-                  <div className="sm:col-span-1.5">
-                    <label className="block text-[10px] text-slate-500 font-semibold mb-1">Cant.</label>
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Fecha de Registro</label>
                     <input
-                      type="number"
+                      type="text"
                       required
-                      min="1"
-                      value={newItemQty}
-                      onChange={(e) => setNewItemQty(parseInt(e.target.value) || 1)}
-                      className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                      value={presFecha}
+                      onChange={(e) => setPresFecha(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white"
+                      placeholder="DD/MM/AAAA"
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-[10px] text-slate-500 font-semibold mb-1">Precio Unitario ($)</label>
+                  <div>
+                    <label className="block text-slate-600 font-bold mb-1">Asesor / Atendido Por</label>
                     <input
-                      type="number"
+                      type="text"
                       required
-                      value={newItemPrice || ''}
-                      onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
-                      className="w-full p-2 border border-slate-200 rounded-lg bg-white"
-                      placeholder="Ej. 1200"
+                      value={presAsesor}
+                      onChange={(e) => setPresAsesor(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg bg-white font-semibold"
                     />
                   </div>
-                  <div className="sm:col-span-1.5 flex items-end">
+                </div>
+
+                {/* DATOS DEL CLIENTE Y VEHÍCULO (2 COLUMNAS COMPACTAS) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* SECCIÓN CLIENTE */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-2 uppercase tracking-wide flex items-center gap-1.5 text-amber-800">
+                      <User size={14} /> Datos del Cliente
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-0.5">Nombre / Razón Social *</label>
+                        <input
+                          type="text"
+                          required
+                          value={presClienteNombre}
+                          onChange={(e) => setPresClienteNombre(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                          placeholder="Ej. Congregación de la misión"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-0.5">Calle y Número</label>
+                        <input
+                          type="text"
+                          value={presClienteCalle}
+                          onChange={(e) => setPresClienteCalle(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                          placeholder="Ej. Av.San Fernando #154"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-slate-500 font-medium mb-0.5">C.P. y Colonia</label>
+                          <input
+                            type="text"
+                            value={presClienteCpColonia}
+                            onChange={(e) => setPresClienteCpColonia(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                            placeholder="14000 Tlalpan Centro"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 font-medium mb-0.5">Alcaldía / Municipio</label>
+                          <input
+                            type="text"
+                            value={presClienteAlcaldia}
+                            onChange={(e) => setPresClienteAlcaldia(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                            placeholder="Tlalpan"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-0.5">Teléfono de Contacto</label>
+                        <input
+                          type="text"
+                          value={presClienteTelefono}
+                          onChange={(e) => setPresClienteTelefono(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                          placeholder="Ej. 73 5266 8332"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECCIÓN VEHÍCULO */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                    <h4 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-2 uppercase tracking-wide flex items-center gap-1.5 text-indigo-800">
+                      <Car size={14} /> Datos del Vehículo
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-0.5">Marca / Motor</label>
+                        <input
+                          type="text"
+                          value={presMarcaMotor}
+                          onChange={(e) => setPresMarcaMotor(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                          placeholder="Ej. FORD-RANGER / 2.3L"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-0.5">Modelo / Color</label>
+                        <input
+                          type="text"
+                          value={presModeloColor}
+                          onChange={(e) => setPresModeloColor(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50"
+                          placeholder="Ej. 2012 / BLANCO"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-slate-500 font-medium mb-0.5">Matrícula (Placas) / VIN</label>
+                          <input
+                            type="text"
+                            value={presMatriculaVin}
+                            onChange={(e) => setPresMatriculaVin(e.target.value)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 font-mono"
+                            placeholder="865-XXJ"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-500 font-medium mb-0.5">Kilometraje (KM)</label>
+                          <input
+                            type="number"
+                            value={presKilometros}
+                            onChange={(e) => setPresKilometros(parseFloat(e.target.value) || 0)}
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-50/50 font-mono"
+                            placeholder="161282"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DESGLOSE DE CONCEPTOS / TABLA PRESUPUESTO */}
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-800 text-sm font-display">
+                      Desglose de Conceptos, Refacciones y Mano de Obra
+                    </h4>
                     <button
-                      type="submit"
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg transition-colors flex justify-center"
+                      type="button"
+                      onClick={handleAddPresupuestoItem}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition-all"
                     >
-                      <Plus size={16} />
+                      <Plus size={14} />
+                      <span>Agregar Partida</span>
                     </button>
                   </div>
-                </form>
 
-                {/* Items list */}
-                <div className="overflow-x-auto text-xs pt-2">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
-                        <th className="p-2">Tipo</th>
-                        <th className="p-2">Descripción</th>
-                        <th className="p-2 text-center">Cant.</th>
-                        <th className="p-2 text-right">Unitario</th>
-                        <th className="p-2 text-right">Subtotal</th>
-                        <th className="p-2 text-center">Aprobación Cliente</th>
-                        <th className="p-2 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeQuoteOrder.items.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="text-center p-6 text-slate-500 italic">No hay partidas agregadas al presupuesto.</td>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
+                          <th className="p-2.5 w-24">Código</th>
+                          <th className="p-2.5 min-w-[280px]">Descripción / Repuesto</th>
+                          <th className="p-2.5 w-20 text-center">Cantidad</th>
+                          <th className="p-2.5 w-32 text-right">Imp. Unitario ($)</th>
+                          <th className="p-2.5 w-32 text-right">Total ($)</th>
+                          <th className="p-2.5 w-12 text-center">Acción</th>
                         </tr>
-                      ) : (
-                        activeQuoteOrder.items.map((item) => (
-                          <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {presItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-amber-50/30 transition-colors">
                             <td className="p-2">
-                              <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold rounded ${
-                                item.type === 'refaccion' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {item.type === 'refaccion' ? 'Part' : 'M.Obra'}
-                              </span>
+                              <input
+                                type="text"
+                                value={item.codigo || ''}
+                                onChange={(e) => handleUpdatePresupuestoItem(item.id, 'codigo', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white font-mono text-center text-xs"
+                                placeholder="Cód"
+                              />
                             </td>
-                            <td className="p-2 text-slate-700 font-medium">{item.description}</td>
-                            <td className="p-2 text-center font-mono">{item.qty}</td>
-                            <td className="p-2 text-right font-mono">${item.unitPrice.toLocaleString()}</td>
-                            <td className="p-2 text-right font-mono font-bold">${(item.qty * item.unitPrice).toLocaleString()}</td>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={item.descripcion}
+                                onChange={(e) => handleUpdatePresupuestoItem(item.id, 'descripcion', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white text-xs"
+                                placeholder="Descripción del trabajo o refacción..."
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.cantidad}
+                                onChange={(e) => handleUpdatePresupuestoItem(item.id, 'cantidad', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white text-center font-bold text-xs"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.importeUnitario || ''}
+                                onChange={(e) => handleUpdatePresupuestoItem(item.id, 'importeUnitario', e.target.value)}
+                                className="w-full p-1.5 border border-slate-200 rounded bg-white text-right font-mono text-xs"
+                                placeholder="0.00"
+                              />
+                            </td>
+                            <td className="p-2 text-right font-mono font-bold text-slate-800 text-xs">
+                              ${item.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
                             <td className="p-2 text-center">
-                              {item.approved === null && (
-                                <div className="flex gap-1 justify-center">
-                                  <button
-                                    onClick={() => approveBudgetLine(activeQuoteOrder.id, item.id, true)}
-                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                    title="Aprobar en nombre del cliente"
-                                  >
-                                    <Check size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => approveBudgetLine(activeQuoteOrder.id, item.id, false)}
-                                    className="p-1 text-red-500 hover:bg-red-50 rounded"
-                                    title="Rechazar"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              )}
-                              {item.approved === true && (
-                                <span className="inline-block px-1.5 py-0.5 font-bold text-[9px] bg-emerald-100 text-emerald-800 rounded">APROBADO</span>
-                              )}
-                              {item.approved === false && (
-                                <span className="inline-block px-1.5 py-0.5 font-bold text-[9px] bg-red-100 text-red-800 rounded">RECHAZADO</span>
-                              )}
-                            </td>
-                            <td className="p-2 text-right">
                               <button
-                                onClick={() => deleteOrderItem(activeQuoteOrder.id, item.id)}
-                                className="text-red-500 hover:text-red-700 p-1"
+                                type="button"
+                                onClick={() => handleRemovePresupuestoItem(item.id)}
+                                className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                title="Eliminar partida"
                               >
                                 <Trash size={14} />
                               </button>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                {/* Summary Box */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-xs">
-                  {/* Payments Registration form */}
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/50 space-y-3">
-                    <h5 className="font-bold text-slate-800">Registrar Cobro / Abono</h5>
+                {/* TOTALES Y CONDICIONES GENERALES */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                  {/* CONDICIONES */}
+                  <div className="space-y-3 text-xs">
+                    <h5 className="font-bold text-slate-800 uppercase tracking-wide">Condiciones del Presupuesto</h5>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="block text-[10px] text-slate-500 mb-1">Monto a pagar</label>
+                        <label className="block text-slate-500 font-medium mb-1">Forma de Pago</label>
+                        <select
+                          value={presFormaPago}
+                          onChange={(e) => setPresFormaPago(e.target.value)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold"
+                        >
+                          <option value="CONTADO">CONTADO</option>
+                          <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                          <option value="TARJETA">TARJETA</option>
+                          <option value="CREDITO">CRÉDITO TALLER</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 font-medium mb-1">Validez (Días)</label>
                         <input
                           type="number"
-                          value={paymentAmount || ''}
-                          onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                          className="w-full p-1.5 border border-slate-200 rounded-lg bg-white"
-                          placeholder="Monto"
-                          max={getOrderBalance(activeQuoteOrder)}
+                          value={presValidezDias}
+                          onChange={(e) => setPresValidezDias(parseInt(e.target.value) || 12)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white text-center font-bold"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-500 mb-1">Forma de Pago</label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value as any)}
-                          className="w-full p-1.5 border border-slate-200 rounded-lg bg-white"
+                        <label className="block text-slate-500 font-medium mb-1">Días Entrega</label>
+                        <input
+                          type="number"
+                          value={presDiasEntrega}
+                          onChange={(e) => setPresDiasEntrega(parseInt(e.target.value) || 3)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white text-center font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-500 font-medium mb-1">Notas / Leyenda Legal de Cierre</label>
+                      <textarea
+                        rows={2}
+                        value={presNotas}
+                        onChange={(e) => setPresNotas(e.target.value)}
+                        className="w-full p-2 border border-slate-200 rounded-lg bg-white text-[11px] text-slate-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* GRAN TOTAL BOX */}
+                  <div className="flex flex-col justify-between items-end bg-white p-6 rounded-xl border border-amber-300/80 shadow-sm space-y-4">
+                    <div className="text-right w-full space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Total del Presupuesto</span>
+                      <div className="text-3xl sm:text-4xl font-extrabold text-amber-700 font-mono tracking-tight">
+                        ${presTotalCalculated.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-normal text-slate-500">MXN</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">Total calculado de {presItems.length} partidas registradas.</p>
+                    </div>
+
+                    {/* BOTONES PRINCIPALES DE ACCIÓN */}
+                    <div className="flex flex-wrap items-center gap-2 justify-end w-full border-t border-slate-100 pt-4">
+                      <button
+                        type="submit"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Check size={16} />
+                        <span>{editingPresupuestoId ? 'Guardar Cambios' : 'Guardar en Historial'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pObj: Presupuesto = {
+                            id: editingPresupuestoId || 'temp',
+                            numero: presNumero,
+                            fecha: presFecha,
+                            asesor: presAsesor,
+                            clienteNombre: presClienteNombre,
+                            clienteCalle: presClienteCalle,
+                            clienteCpColonia: presClienteCpColonia,
+                            clienteAlcaldia: presClienteAlcaldia,
+                            clienteTelefono: presClienteTelefono,
+                            marcaMotor: presMarcaMotor,
+                            modeloColor: presModeloColor,
+                            matriculaVin: presMatriculaVin,
+                            kilometros: presKilometros,
+                            items: presItems,
+                            formaPago: presFormaPago,
+                            total: presTotalCalculated,
+                            validezDias: presValidezDias,
+                            diasEntrega: presDiasEntrega,
+                            notas: presNotas,
+                            createdAt: new Date().toISOString(),
+                            status: 'Enviado'
+                          };
+                          downloadSaePresupuestoPdf(pObj);
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-amber-600/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Printer size={16} />
+                        <span>Imprimir / PDF SAE</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pObj: Presupuesto = {
+                            id: editingPresupuestoId || 'temp',
+                            numero: presNumero,
+                            fecha: presFecha,
+                            asesor: presAsesor,
+                            clienteNombre: presClienteNombre,
+                            clienteCalle: presClienteCalle,
+                            clienteCpColonia: presClienteCpColonia,
+                            clienteAlcaldia: presClienteAlcaldia,
+                            clienteTelefono: presClienteTelefono,
+                            marcaMotor: presMarcaMotor,
+                            modeloColor: presModeloColor,
+                            matriculaVin: presMatriculaVin,
+                            kilometros: presKilometros,
+                            items: presItems,
+                            formaPago: presFormaPago,
+                            total: presTotalCalculated,
+                            validezDias: presValidezDias,
+                            diasEntrega: presDiasEntrega,
+                            notas: presNotas,
+                            createdAt: new Date().toISOString(),
+                            status: 'Enviado'
+                          };
+                          handleSendPresupuestoWhatsApp(pObj);
+                        }}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-emerald-700/20 flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Send size={16} />
+                        <span>Enviar por WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: HISTORIAL DE REGISTROS DE PRESUPUESTOS */}
+          {presupuestoSubTab === 'historial' && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md space-y-6">
+              {/* TOP HEADER & SEARCH */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 font-display flex items-center gap-2">
+                    <History size={20} className="text-amber-600" />
+                    Historial de Registros de Presupuestos ({presupuestos.length})
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Consulta, imprime, comparte en WhatsApp o convierte presupuestos anteriores en órdenes de servicio activas.
+                  </p>
+                </div>
+
+                <div className="relative w-full sm:w-72">
+                  <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={presSearchQuery}
+                    onChange={(e) => setPresSearchQuery(e.target.value)}
+                    placeholder="Buscar folio, cliente, placas..."
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* LISTA / CARDS DE PRESUPUESTOS */}
+              <div className="space-y-4">
+                {presupuestos.filter(p => {
+                  if (!presSearchQuery.trim()) return true;
+                  const q = presSearchQuery.toLowerCase();
+                  return (
+                    p.numero.toLowerCase().includes(q) ||
+                    p.clienteNombre.toLowerCase().includes(q) ||
+                    p.marcaMotor.toLowerCase().includes(q) ||
+                    p.matriculaVin.toLowerCase().includes(q)
+                  );
+                }).length === 0 ? (
+                  <div className="bg-slate-50 rounded-2xl p-12 text-center text-slate-400 border border-dashed border-slate-200 space-y-2">
+                    <FileText size={48} className="mx-auto text-slate-300" />
+                    <p className="font-bold text-slate-600 text-sm">No se encontraron presupuestos registrados</p>
+                    <p className="text-xs text-slate-400">Intenta cambiar el término de búsqueda o crea uno nuevo en la pestaña de Formulario.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {presupuestos
+                      .filter(p => {
+                        if (!presSearchQuery.trim()) return true;
+                        const q = presSearchQuery.toLowerCase();
+                        return (
+                          p.numero.toLowerCase().includes(q) ||
+                          p.clienteNombre.toLowerCase().includes(q) ||
+                          p.marcaMotor.toLowerCase().includes(q) ||
+                          p.matriculaVin.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 relative group"
                         >
-                          <option value="Efectivo">Efectivo</option>
-                          <option value="Tarjeta">Tarjeta Bancaria</option>
-                          <option value="Transferencia">Transferencia</option>
-                          <option value="Credito">Crédito Taller</option>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                              <div>
+                                <span className="font-mono bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded text-xs">
+                                  Folio #{p.numero}
+                                </span>
+                                <span className="text-[11px] text-slate-400 block mt-1">{p.fecha}</span>
+                              </div>
+                              <span className="text-lg font-bold text-slate-800 font-mono">
+                                ${p.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            <div className="text-xs space-y-1">
+                              <p className="font-bold text-slate-800">{p.clienteNombre}</p>
+                              <p className="text-slate-500 font-mono text-[11px]">{p.clienteTelefono}</p>
+                              <p className="text-slate-600 text-[11px] border-t border-slate-100 pt-1 mt-1">
+                                🚗 {p.marcaMotor} • <span className="font-mono font-bold text-slate-700">{p.matriculaVin}</span>
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                Conceptos: <strong>{p.items?.length || 0} partidas</strong> | Pago: <strong>{p.formaPago}</strong>
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* ACCIONES DEL PRESUPUESTO */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-slate-100 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => handleEditPresupuestoFromList(p)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-lg transition-colors flex items-center gap-1 font-bold text-[11px]"
+                              title="Editar / Cargar en Formulario"
+                            >
+                              <Edit2 size={13} />
+                              <span>Editar</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => downloadSaePresupuestoPdf(p)}
+                              className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 p-2 rounded-lg transition-colors flex items-center gap-1 font-bold text-[11px]"
+                              title="Descargar o Imprimir PDF SAE"
+                            >
+                              <Printer size={13} />
+                              <span>PDF</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSendPresupuestoWhatsApp(p)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 p-2 rounded-lg transition-colors flex items-center gap-1 font-bold text-[11px]"
+                              title="Enviar por WhatsApp"
+                            >
+                              <Send size={13} />
+                              <span>WhatsApp</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (convertPresupuestoToOrder) {
+                                  const newOrd = convertPresupuestoToOrder(p.id);
+                                  if (newOrd) {
+                                    setPresSuccessMessage(`🎉 ¡Presupuesto #${p.numero} convertido a Orden de Trabajo #${newOrd.id}!`);
+                                    setTimeout(() => setPresSuccessMessage(null), 4000);
+                                  }
+                                }
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors flex items-center gap-1 font-bold text-[11px] ml-auto"
+                              title="Convertir este presupuesto a una Orden de Trabajo en proceso"
+                            >
+                              <RefreshCw size={13} />
+                              <span>Convertir a Orden</span>
+                            </button>
+
+                            {deletePresupuesto && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`¿Eliminar el presupuesto folio #${p.numero}?`)) {
+                                    deletePresupuesto(p.id);
+                                  }
+                                }}
+                                className="text-red-400 hover:text-red-600 p-2 rounded-lg transition-colors"
+                                title="Eliminar del historial"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: COTIZACIÓN POR ÓRDENES ACTIVAS (EXISTENTE) */}
+          {presupuestoSubTab === 'ordenes' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Active Orders List Sidebar */}
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <h4 className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-2 font-display">
+                  Órdenes de Trabajo Activas
+                </h4>
+                <div className="space-y-2 max-h-[380px] overflow-y-auto">
+                  {orders.map((o) => {
+                    const client = clients.find(c => c.id === o.clientId);
+                    const vehicle = vehicles.find(v => v.id === o.vehicleId);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedOrderId(o.id);
+                          setPaymentAmount(0);
+                        }}
+                        className={`w-full text-left p-3 border rounded-xl text-xs transition-all ${
+                          selectedOrderId === o.id 
+                            ? 'border-amber-500 bg-amber-50/50 shadow-sm font-semibold' 
+                            : 'border-slate-100 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">{o.id}</span>
+                          <span className="text-[10px] text-slate-400">{o.dateOpened.split(' ')[0]}</span>
+                        </div>
+                        <p className="text-slate-800 font-bold">{client?.name}</p>
+                        <p className="text-slate-500">{vehicle?.brand} {vehicle?.model} • Placa: {vehicle?.plate}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Estatus: <strong className="text-slate-600">{o.status.replace('_', ' ')}</strong>
+                          </span>
+                          <span className="font-bold text-indigo-600">${Math.round(getOrderTotal(o)).toLocaleString()} MXN</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* QUOTE WORKSPACE / DETAILS */}
+              {activeQuoteOrder ? (
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Order Overview Header */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-800 font-display">
+                          Detalle de Orden: {activeQuoteOrder.id}
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Cliente: <strong>{clients.find(c => c.id === activeQuoteOrder.clientId)?.name}</strong> • Auto: <strong>{vehicles.find(v => v.id === activeQuoteOrder.vehicleId)?.brand} {vehicles.find(v => v.id === activeQuoteOrder.vehicleId)?.model}</strong>
+                        </p>
+                      </div>
+                      <div>
+                        <select
+                          value={activeQuoteOrder.status}
+                          onChange={(e) => updateOrderStatus(activeQuoteOrder.id, e.target.value as any)}
+                          className="p-2 border border-amber-300 rounded-lg bg-amber-50 font-bold text-xs text-amber-800 focus:outline-amber-500"
+                        >
+                          <option value="Diagnostico">Fase: En Diagnóstico</option>
+                          <option value="Esperando_Refacciones">Fase: Esperando Refacciones</option>
+                          <option value="En_Reparacion">Fase: En Reparación</option>
+                          <option value="Control_Calidad">Fase: Control de Calidad</option>
+                          <option value="Listo_Entrega">Fase: Listo para Entrega</option>
                         </select>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={paymentAmount <= 0}
-                      onClick={() => {
-                        registerOrderPayment(activeQuoteOrder.id, paymentAmount, paymentMethod);
-                        setPaymentAmount(0);
-                        alert(`¡Cobro registrado por $${paymentAmount} MXN vía ${paymentMethod}!`);
-                      }}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg disabled:opacity-40"
-                    >
-                      Confirmar Cobro
-                    </button>
+                    <div className="text-xs space-y-2">
+                      <p className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                        <strong className="text-slate-600 block mb-1">Motivo de Ingreso:</strong>
+                        {activeQuoteOrder.reportedFailure}
+                      </p>
+                      {activeQuoteOrder.diagnostics && (
+                        <p className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 text-slate-800">
+                          <strong className="text-amber-700 block mb-1">Diagnóstico Técnico:</strong>
+                          {activeQuoteOrder.diagnostics}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Simulated Digital Link Send */}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const clientObj = clients.find(c => c.id === activeQuoteOrder.clientId);
+                          const rawPhone = (clientObj?.phone || '').replace(/\D/g, '');
+                          const phone = rawPhone.length === 10 ? `52${rawPhone}` : rawPhone;
+                          const msg = `*SERVICIO AUTOMOTRIZ ESPECIALIZADO (SAE)*\nHola *${clientObj?.name}*, adjuntamos el seguimiento y cotización de tu Orden #${activeQuoteOrder.id}.\nTotal Cotizado: *$${Math.round(getOrderTotal(activeQuoteOrder)).toLocaleString()} MXN*`;
+                          const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                          window.open(url, '_blank');
+                        }}
+                        className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+                      >
+                        <Send size={12} />
+                        Compartir por WhatsApp
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Pricing Sheet totals */}
-                  <div className="space-y-1.5 text-right font-mono self-end">
-                    <p className="text-slate-500">Subtotal: <strong className="text-slate-700">${getOrderSubtotal(activeQuoteOrder).toLocaleString()}</strong></p>
-                    <p className="text-slate-500">IVA (16%): <strong className="text-slate-700">${Math.round(getOrderTax(activeQuoteOrder)).toLocaleString()}</strong></p>
-                    <p className="text-lg font-bold text-slate-800 border-t border-slate-100 pt-1">
-                      Total: <span className="text-indigo-600">${Math.round(getOrderTotal(activeQuoteOrder)).toLocaleString()} MXN</span>
-                    </p>
-                    <div className="bg-emerald-50 text-emerald-800 p-2 rounded-lg text-xs mt-2 border border-emerald-100 space-y-1 text-left">
-                      <p className="flex justify-between font-bold"><span>Total Pagado:</span> <span>${getOrderAmountPaid(activeQuoteOrder).toLocaleString()}</span></p>
-                      <p className="flex justify-between font-bold text-red-700"><span>Saldo Restante:</span> <span>${Math.round(getOrderBalance(activeQuoteOrder)).toLocaleString()}</span></p>
+                  {/* BUDGET / ITEMS BUILDER */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                    <h4 className="font-bold text-slate-800 font-display">Desglose de Cotización</h4>
+
+                    {/* Add item to quote form */}
+                    <form onSubmit={handleAddItemToQuote} className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Tipo</label>
+                        <select
+                          value={newItemType}
+                          onChange={(e) => setNewItemType(e.target.value as any)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        >
+                          <option value="refaccion">Refacción</option>
+                          <option value="mano_de_obra">Mano Obra</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-5">
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Descripción de Partida</label>
+                        <input
+                          type="text"
+                          required
+                          value={newItemDesc}
+                          onChange={(e) => setNewItemDesc(e.target.value)}
+                          placeholder="Ej. Cambio de Aceite Sintético..."
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div className="sm:col-span-1.5">
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Cant.</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          value={newItemQty}
+                          onChange={(e) => setNewItemQty(parseInt(e.target.value) || 1)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] text-slate-500 font-semibold mb-1">Precio Unitario ($)</label>
+                        <input
+                          type="number"
+                          required
+                          value={newItemPrice || ''}
+                          onChange={(e) => setNewItemPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                          placeholder="Ej. 1200"
+                        />
+                      </div>
+                      <div className="sm:col-span-1.5 flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg transition-colors flex justify-center cursor-pointer"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Items list */}
+                    <div className="overflow-x-auto text-xs pt-2">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                            <th className="p-2">Tipo</th>
+                            <th className="p-2">Descripción</th>
+                            <th className="p-2 text-center">Cant.</th>
+                            <th className="p-2 text-right">Unitario</th>
+                            <th className="p-2 text-right">Subtotal</th>
+                            <th className="p-2 text-center">Aprobación Cliente</th>
+                            <th className="p-2 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeQuoteOrder.items.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="text-center p-6 text-slate-500 italic">No hay partidas agregadas al presupuesto.</td>
+                            </tr>
+                          ) : (
+                            activeQuoteOrder.items.map((item) => (
+                              <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                                <td className="p-2">
+                                  <span className={`inline-block px-1.5 py-0.5 text-[9px] font-bold rounded ${
+                                    item.type === 'refaccion' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {item.type === 'refaccion' ? 'Part' : 'M.Obra'}
+                                  </span>
+                                </td>
+                                <td className="p-2 text-slate-700 font-medium">{item.description}</td>
+                                <td className="p-2 text-center font-mono">{item.qty}</td>
+                                <td className="p-2 text-right font-mono">${item.unitPrice.toLocaleString()}</td>
+                                <td className="p-2 text-right font-mono font-bold">${(item.qty * item.unitPrice).toLocaleString()}</td>
+                                <td className="p-2 text-center">
+                                  {item.approved === null && (
+                                    <div className="flex gap-1 justify-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => approveBudgetLine(activeQuoteOrder.id, item.id, true)}
+                                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                        title="Aprobar en nombre del cliente"
+                                      >
+                                        <Check size={14} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => approveBudgetLine(activeQuoteOrder.id, item.id, false)}
+                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                        title="Rechazar"
+                                      >
+                                        <X size={14} />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {item.approved === true && (
+                                    <span className="inline-block px-1.5 py-0.5 font-bold text-[9px] bg-emerald-100 text-emerald-800 rounded">APROBADO</span>
+                                  )}
+                                  {item.approved === false && (
+                                    <span className="inline-block px-1.5 py-0.5 font-bold text-[9px] bg-red-100 text-red-800 rounded">RECHAZADO</span>
+                                  )}
+                                </td>
+                                <td className="p-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteOrderItem(activeQuoteOrder.id, item.id)}
+                                    className="text-red-500 hover:text-red-700 p-1"
+                                  >
+                                    <Trash size={14} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Summary Box */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-xs">
+                      {/* Payments Registration form */}
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/50 space-y-3">
+                        <h5 className="font-bold text-slate-800">Registrar Cobro / Abono</h5>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] text-slate-500 mb-1">Monto a pagar</label>
+                            <input
+                              type="number"
+                              value={paymentAmount || ''}
+                              onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                              className="w-full p-1.5 border border-slate-200 rounded-lg bg-white"
+                              placeholder="Monto"
+                              max={getOrderBalance(activeQuoteOrder)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-slate-500 mb-1">Forma de Pago</label>
+                            <select
+                              value={paymentMethod}
+                              onChange={(e) => setPaymentMethod(e.target.value as any)}
+                              className="w-full p-1.5 border border-slate-200 rounded-lg bg-white"
+                            >
+                              <option value="Efectivo">Efectivo</option>
+                              <option value="Tarjeta">Tarjeta Bancaria</option>
+                              <option value="Transferencia">Transferencia</option>
+                              <option value="Credito">Crédito Taller</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={paymentAmount <= 0}
+                          onClick={() => {
+                            registerOrderPayment(activeQuoteOrder.id, paymentAmount, paymentMethod);
+                            setPaymentAmount(0);
+                            alert(`¡Cobro registrado por $${paymentAmount} MXN vía ${paymentMethod}!`);
+                          }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg disabled:opacity-40 cursor-pointer"
+                        >
+                          Confirmar Cobro
+                        </button>
+                      </div>
+
+                      {/* Pricing Sheet totals */}
+                      <div className="space-y-1.5 text-right font-mono self-end">
+                        <p className="text-slate-500">Subtotal: <strong className="text-slate-700">${getOrderSubtotal(activeQuoteOrder).toLocaleString()}</strong></p>
+                        <p className="text-slate-500">IVA (16%): <strong className="text-slate-700">${Math.round(getOrderTax(activeQuoteOrder)).toLocaleString()}</strong></p>
+                        <p className="text-lg font-bold text-slate-800 border-t border-slate-100 pt-1">
+                          Total: <span className="text-indigo-600">${Math.round(getOrderTotal(activeQuoteOrder)).toLocaleString()} MXN</span>
+                        </p>
+                        <div className="bg-emerald-50 text-emerald-800 p-2 rounded-lg text-xs mt-2 border border-emerald-100 space-y-1 text-left">
+                          <p className="flex justify-between font-bold"><span>Total Pagado:</span> <span>${getOrderAmountPaid(activeQuoteOrder).toLocaleString()}</span></p>
+                          <p className="flex justify-between font-bold text-red-700"><span>Saldo Restante:</span> <span>${Math.round(getOrderBalance(activeQuoteOrder)).toLocaleString()}</span></p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="lg:col-span-2 bg-slate-50 rounded-xl border border-dashed border-slate-300 p-12 text-center flex flex-col justify-center items-center">
-              <FileText size={48} className="text-slate-300 mb-2" />
-              <p className="text-sm font-semibold text-slate-500">Selecciona una orden de la lista para ver su presupuesto.</p>
+              ) : (
+                <div className="lg:col-span-2 bg-slate-50 rounded-xl border border-dashed border-slate-300 p-12 text-center flex flex-col justify-center items-center">
+                  <FileText size={48} className="text-slate-300 mb-2" />
+                  <p className="text-sm font-semibold text-slate-500">Selecciona una orden de la lista para ver su presupuesto.</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2290,26 +3196,26 @@ export default function AdvisorDashboard({
                   </div>
 
                   {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
-                  <div className="bg-white/75 border border-emerald-100 rounded-xl p-3 space-y-2 text-xs text-slate-700 shadow-xs">
-                    <p className="font-black text-amber-800 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                  <div className="bg-slate-950/40 border border-amber-500/20 rounded-xl p-3.5 space-y-2.5 text-xs shadow-md">
+                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-600">
                       <AlertTriangle size={13} className="text-amber-600 shrink-0" />
                       Nota Importante de WhatsApp
                     </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
                       Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
                     </p>
-                    <div className="pt-1.5 border-t border-emerald-100/50 space-y-2 text-[11px]">
-                      <div className="flex items-start gap-2">
-                        <span className="bg-emerald-100 text-emerald-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
-                        <div>
-                          <strong className="text-slate-900">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-emerald-700">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                    <div className="pt-2 border-t border-slate-800 space-y-2 text-[11px]">
+                      <div className="flex items-start gap-2.5">
+                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div className="text-slate-300">
+                          <strong className="text-amber-600">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-600">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 border border-slate-700 px-1 py-0.5 rounded text-white font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-2">
-                        <span className="bg-emerald-100 text-emerald-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
-                        <div>
-                          <strong className="text-slate-900">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                      <div className="flex items-start gap-2.5">
+                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div className="text-slate-300">
+                          <strong className="text-amber-600">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
                         </div>
                       </div>
                     </div>
@@ -2342,26 +3248,26 @@ export default function AdvisorDashboard({
                   </div>
 
                   {/* INFO SOBRE ADJUNTOS EN WHATSAPP */}
-                  <div className="bg-white/75 border border-amber-100 rounded-xl p-3 space-y-2 text-xs text-slate-700 shadow-xs">
-                    <p className="font-black text-amber-850 flex items-center gap-1 text-[11px] uppercase tracking-wider">
+                  <div className="bg-slate-950/40 border border-amber-500/20 rounded-xl p-3.5 space-y-2.5 text-xs shadow-md">
+                    <p className="font-black flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-600">
                       <AlertTriangle size={13} className="text-amber-600 shrink-0" />
                       Nota Importante de WhatsApp
                     </p>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
                       Por políticas de seguridad de WhatsApp, <strong>ningún sitio web</strong> puede adjuntar archivos (PDF o imágenes) de manera automática. Para enviarlo, sigue cualquiera de estos dos métodos sencillos:
                     </p>
-                    <div className="pt-1.5 border-t border-amber-100/50 space-y-2 text-[11px]">
-                      <div className="flex items-start gap-2">
-                        <span className="bg-amber-100 text-amber-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
-                        <div>
-                          <strong className="text-slate-900">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-slate-700">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
+                    <div className="pt-2 border-t border-slate-800 space-y-2 text-[11px]">
+                      <div className="flex items-start gap-2.5">
+                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                        <div className="text-slate-300">
+                          <strong className="text-amber-600">Método Rápido (Pegar Imagen):</strong> Haz clic en el botón superior <span className="font-bold text-amber-650">"Copiar Imagen"</span>. Al abrir el chat de WhatsApp, presiona <kbd className="bg-slate-800 border border-slate-700 px-1 py-0.5 rounded text-white font-mono text-[9px]">Ctrl + V</kbd> (o mantén presionado y selecciona <strong>Pegar</strong> en móvil) para enviar la orden digital como imagen completa.
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-2">
-                        <span className="bg-amber-100 text-amber-800 font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
-                        <div>
-                          <strong className="text-slate-900">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
+                      <div className="flex items-start gap-2.5">
+                        <span style={{ backgroundColor: '#F8B232', color: '#010101' }} className="font-black rounded-full w-4.5 h-4.5 flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                        <div className="text-slate-300">
+                          <strong className="text-amber-600">Método PDF:</strong> El archivo PDF de la orden ya se descargó en tu dispositivo. En el chat de WhatsApp, haz clic en el botón de adjuntar (📎 o +) y selecciona el PDF de tu carpeta de Descargas.
                         </div>
                       </div>
                     </div>
